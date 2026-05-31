@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% block title %}Administration{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+  <!-- En-tête -->
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+    <div>
+      <h2 class="fw-bold mb-0">🛡️ Administration</h2>
+      <small class="text-muted">Panneau de contrôle — {{ user.get_full_name }}</small>
+    </div>
+    <a href="/admin/" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-gear me-1"></i>Admin Django
+    </a>
+  </div>
+
+  <!-- Actions rapides -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-3 col-6">
+      <a href="/admin/accounts/utilisateur/"
+         class="card border-0 shadow-sm rounded-4 p-4 text-decoration-none text-dark d-block text-center">
+        <i class="bi bi-people fs-2 text-primary mb-2 d-block"></i>
+        <div class="fw-bold small">Utilisateurs</div>
+      </a>
+    </div>
+    <div class="col-md-3 col-6">
+      <a href="/admin/logements/logement/"
+         class="card border-0 shadow-sm rounded-4 p-4 text-decoration-none text-dark d-block text-center">
+        <i class="bi bi-building fs-2 text-success mb-2 d-block"></i>
+        <div class="fw-bold small">Annonces</div>
+      </a>
+    </div>
+    <div class="col-md-3 col-6">
+      <a href="/admin/"
+         class="card border-0 shadow-sm rounded-4 p-4 text-decoration-none text-dark d-block text-center">
+        <i class="bi bi-shield-check fs-2 text-warning mb-2 d-block"></i>
+        <div class="fw-bold small">Modération</div>
+      </a>
+    </div>
+    <div class="col-md-3 col-6">
+      <a href="{% url 'accounts:profil' %}"
+         class="card border-0 shadow-sm rounded-4 p-4 text-decoration-none text-dark d-block text-center">
+        <i class="bi bi-person-gear fs-2 text-danger mb-2 d-block"></i>
+        <div class="fw-bold small">Mon profil</div>
+      </a>
+    </div>
+  </div>
+
+  <!-- Info admin -->
+  <div class="card border-0 shadow-sm rounded-4 p-4">
+    <div class="d-flex align-items-center gap-3">
+      <img src="{{ user.get_avatar_url }}"
+           class="rounded-circle"
+           width="60" height="60"
+           style="object-fit:cover">
+      <div>
+        <div class="fw-bold fs-5">{{ user.get_full_name }}</div>
+        <div class="text-muted small">{{ user.email }}</div>
+        <span class="badge bg-danger mt-1">{{ user.get_role_display }}</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

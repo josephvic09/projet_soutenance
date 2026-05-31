@@ -1,0 +1,173 @@
+{% extends 'base.html' %}
+{% block title %}Conversation{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+  <!-- En-tête -->
+  <div class="d-flex align-items-center gap-3 mb-4">
+    <a href="{% url 'chat:conversations' %}"
+       class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left"></i>
+    </a>
+
+    {% if user == conversation.locataire %}
+      <img src="{{ conversation.bailleur.get_avatar_url }}"
+           class="rounded-circle"
+           width="42" height="42"
+           style="object-fit:cover">
+      <div>
+        <div class="fw-bold">{{ conversation.bailleur.get_full_name }}</div>
+        {% if conversation.logement %}
+        <small class="text-muted">
+          🏠 {{ conversation.logement.titre|truncatechars:40 }}
+        </small>
+        {% endif %}
+      </div>
+      {% if conversation.logement %}
+      <a href="{% url 'logements:detail' conversation.logement.slug %}"
+         class="btn btn-sm btn-outline-primary ms-auto">
+        Voir l'annonce
+      </a>
+      {% endif %}
+    {% else %}
+      <img src="{{ conversation.locataire.get_avatar_url }}"
+           class="rounded-circle"
+           width="42" height="42"
+           style="object-fit:cover">
+      <div>
+        <div class="fw-bold">{{ conversation.locataire.get_full_name }}</div>
+        <small class="text-muted">Locataire</small>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Fenêtre chat -->
+  <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+
+    <!-- Messages -->
+    <div id="messagesContainer"
+         class="p-4 overflow-auto bg-light"
+         style="min-height:450px;max-height:500px">
+
+      {% for msg in messages %}
+      <div class="d-flex
+                  {% if msg.expediteur == user %}
+                    justify-content-end
+                  {% else %}
+                    justify-content-start
+                  {% endif %}
+                  mb-3">
+
+        {% if msg.expediteur != user %}
+        <img src="{{ msg.expediteur.get_avatar_url }}"
+             class="rounded-circle me-2 align-self-end flex-shrink-0"
+             width="32" height="32"
+             style="object-fit:cover">
+        {% endif %}
+
+        <div class="px-3 py-2 rounded-4
+                    {% if msg.expediteur == user %}
+                      bg-primary text-white
+                    {% else %}
+                      bg-white border
+                    {% endif %}"
+             style="max-width:70%;word-wrap:break-word">
+          <div style="font-size:.9rem">{{ msg.contenu }}</div>
+          <div style="font-size:.7rem;opacity:.7;
+                      text-align:right;margin-top:2px">
+            {{ msg.cree_le|date:"H:i" }}
+          </div>
+        </div>
+
+      </div>
+      {% empty %}
+      <div class="text-center text-muted py-5">
+        <div class="fs-2 mb-2">👋</div>
+        <p>Démarrez la conversation !</p>
+      </div>
+      {% endfor %}
+
+    </div>
+
+    <!-- Zone saisie -->
+    <div class="p-3 border-top bg-white">
+      <div class="d-flex gap-2">
+        <input type="text"
+               id="msgInput"
+               class="form-control rounded-pill"
+               placeholder="Écrire un message..."
+               autocomplete="off"
+               maxlength="2000">
+        <button class="btn btn-primary rounded-circle"
+                id="sendBtn"
+                style="width:42px;height:42px;
+                       display:flex;align-items:center;
+                       justify-content:center">
+          <i class="bi bi-send-fill"></i>
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const convUuid  = "{{ conversation.uuid }}";
+const container = document.getElementById('messagesContainer');
+const input     = document.getElementById('msgInput');
+const sendBtn   = document.getElementById('sendBtn');
+
+// Scroll en bas au chargement
+container.scrollTop = container.scrollHeight;
+
+// Obtenir CSRF token
+function getCsrf() {
+  const c = document.cookie.split(';').find(c => c.trim().startsWith('csrftoken='));
+  return c ? c.trim().split('=')[1] : '';
+}
+
+async function sendMessage() {
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+
+  // Affichage immédiat
+  const now = new Date().toLocaleTimeString('fr-FR', {
+    hour: '2-digit', minute: '2-digit'
+  });
+  container.insertAdjacentHTML('beforeend', `
+    <div class="d-flex justify-content-end mb-3">
+      <div class="px-3 py-2 rounded-4 bg-primary text-white"
+           style="max-width:70%;word-wrap:break-word">
+        <div style="font-size:.9rem">${text}</div>
+        <div style="font-size:.7rem;opacity:.7;text-align:right;margin-top:2px">
+          ${now}
+        </div>
+      </div>
+    </div>`);
+  container.scrollTop = container.scrollHeight;
+
+  // Envoyer au serveur
+  try {
+    await fetch(`/chat/${convUuid}/envoyer/`, {
+      method:  'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken':  getCsrf()
+      },
+      body: JSON.stringify({ contenu: text })
+    });
+  } catch(e) {
+    console.error('Erreur envoi:', e);
+  }
+}
+
+sendBtn.addEventListener('click', sendMessage);
+input.addEventListener('keydown', e => {
+  if (e.key === 'Enter') sendMessage();
+});
+</script>
+{% endblock %}

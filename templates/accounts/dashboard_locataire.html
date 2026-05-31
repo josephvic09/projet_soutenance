@@ -1,0 +1,322 @@
+{% extends 'base.html' %}
+{% load static humanize %}
+{% block title %}Mon espace{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+  <!-- ─── En-tête ──────────────────────────────────── -->
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+    <div>
+      <p class="text-muted small mb-0">Tableau de bord</p>
+      <h2 class="fw-bold mb-0">
+        Bonjour, {{ user.prenom }} 👋
+      </h2>
+    </div>
+    <a href="{% url 'chat:chatbot' %}" class="btn btn-primary">
+      <svg data-lucide="bot" style="width:17px;height:17px;margin-right:6px;vertical-align:-3px"></svg>
+      Rechercher avec l'IA
+    </a>
+  </div>
+
+  <!-- ─── Stats ─────────────────────────────────────── -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-3 col-6">
+      <div class="dash-stat">
+        <div class="dash-icon red">
+          <svg data-lucide="heart" style="width:22px;height:22px;color:#ef4444"></svg>
+        </div>
+        <div>
+          <div class="dash-val">{{ nb_favoris }}</div>
+          <div class="dash-lbl">Favoris</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3 col-6">
+      <div class="dash-stat">
+        <div class="dash-icon indigo">
+          <svg data-lucide="calendar-check" style="width:22px;height:22px;color:#6366f1"></svg>
+        </div>
+        <div>
+          <div class="dash-val">{{ nb_reservations }}</div>
+          <div class="dash-lbl">Réservations</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3 col-6">
+      <div class="dash-stat">
+        <div class="dash-icon green">
+          <svg data-lucide="message-circle" style="width:22px;height:22px;color:#10b981"></svg>
+        </div>
+        <div>
+          <div class="dash-val">{{ nb_messages }}</div>
+          <div class="dash-lbl">Conversations</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3 col-6">
+      <div class="dash-stat">
+        <div class="dash-icon orange">
+          <svg data-lucide="search" style="width:22px;height:22px;color:#f59e0b"></svg>
+        </div>
+        <div>
+          <div class="dash-val">∞</div>
+          <div class="dash-lbl">Recherches</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── Actions rapides ───────────────────────────── -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-3 col-6">
+      <a href="{% url 'logements:recherche' %}"
+         class="d-block text-decoration-none">
+        <div class="card p-3 text-center h-100"
+             style="border:1.5px solid var(--border);transition:.2s;cursor:pointer"
+             onmouseover="this.style.borderColor='var(--primary)';this.style.background='var(--primary-light)'"
+             onmouseout="this.style.borderColor='var(--border)';this.style.background='white'">
+          <svg data-lucide="search" style="width:28px;height:28px;color:var(--primary);margin:0 auto .75rem"></svg>
+          <div class="fw-semibold small">Rechercher</div>
+          <div class="text-muted" style="font-size:.75rem">Trouver un logement</div>
+        </div>
+      </a>
+    </div>
+    <div class="col-md-3 col-6">
+      <a href="{% url 'chat:chatbot' %}"
+         class="d-block text-decoration-none">
+        <div class="card p-3 text-center h-100"
+             style="border:1.5px solid var(--border);transition:.2s;cursor:pointer"
+             onmouseover="this.style.borderColor='var(--primary)';this.style.background='var(--primary-light)'"
+             onmouseout="this.style.borderColor='var(--border)';this.style.background='white'">
+          <svg data-lucide="bot" style="width:28px;height:28px;color:var(--primary);margin:0 auto .75rem"></svg>
+          <div class="fw-semibold small">Chatbot IA</div>
+          <div class="text-muted" style="font-size:.75rem">Recherche intelligente</div>
+        </div>
+      </a>
+    </div>
+    <div class="col-md-3 col-6">
+      <a href="{% url 'accounts:mes_favoris' %}"
+         class="d-block text-decoration-none">
+        <div class="card p-3 text-center h-100"
+             style="border:1.5px solid var(--border);transition:.2s;cursor:pointer"
+             onmouseover="this.style.borderColor='#ef4444';this.style.background='#fff5f5'"
+             onmouseout="this.style.borderColor='var(--border)';this.style.background='white'">
+          <svg data-lucide="heart" style="width:28px;height:28px;color:#ef4444;margin:0 auto .75rem"></svg>
+          <div class="fw-semibold small">Mes favoris</div>
+          <div class="text-muted" style="font-size:.75rem">{{ nb_favoris }} logement{{ nb_favoris|pluralize }}</div>
+        </div>
+      </a>
+    </div>
+    <div class="col-md-3 col-6">
+      <a href="{% url 'accounts:mes_reservations' %}"
+         class="d-block text-decoration-none">
+        <div class="card p-3 text-center h-100"
+             style="border:1.5px solid var(--border);transition:.2s;cursor:pointer"
+             onmouseover="this.style.borderColor='#10b981';this.style.background='#f0fdf4'"
+             onmouseout="this.style.borderColor='var(--border)';this.style.background='white'">
+          <svg data-lucide="calendar-check" style="width:28px;height:28px;color:#10b981;margin:0 auto .75rem"></svg>
+          <div class="fw-semibold small">Réservations</div>
+          <div class="text-muted" style="font-size:.75rem">{{ nb_reservations }} demande{{ nb_reservations|pluralize }}</div>
+        </div>
+      </a>
+    </div>
+  </div>
+
+  <div class="row g-4">
+
+    <!-- ─── Favoris récents ────────────────────────── -->
+    <div class="col-lg-8">
+      <div class="card border-0 shadow-sm rounded-4 h-100">
+        <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center rounded-top-4">
+          <h5 class="fw-bold mb-0 d-flex align-items-center gap-2">
+            <svg data-lucide="heart" style="width:18px;height:18px;color:#ef4444"></svg>
+            Mes favoris récents
+          </h5>
+          <a href="{% url 'accounts:mes_favoris' %}"
+             class="btn btn-sm btn-outline-primary">
+            Voir tout
+            <svg data-lucide="arrow-right" style="width:14px;height:14px;margin-left:4px"></svg>
+          </a>
+        </div>
+        <div class="card-body p-3">
+          {% if favoris %}
+          <div class="row g-3">
+            {% for fav in favoris %}
+            <div class="col-md-6">
+              <div class="d-flex gap-3 p-3 border rounded-3 h-100"
+                   style="transition:.2s"
+                   onmouseover="this.style.borderColor='var(--primary)';this.style.background='var(--primary-light)'"
+                   onmouseout="this.style.borderColor='var(--border)';this.style.background='white'">
+                {% with photo=fav.logement.get_photo_principale %}
+                <img src="{% if photo %}{{ photo.image.url }}{% else %}/static/images/no-image.jpg{% endif %}"
+                     class="rounded-3 flex-shrink-0"
+                     style="width:75px;height:65px;object-fit:cover">
+                {% endwith %}
+                <div class="flex-grow-1 overflow-hidden">
+                  <a href="{% url 'logements:detail' fav.logement.slug %}"
+                     class="text-decoration-none">
+                    <div class="fw-semibold small text-truncate">
+                      {{ fav.logement.titre }}
+                    </div>
+                  </a>
+                  <div style="font-size:.82rem;font-weight:800;
+                              background:linear-gradient(135deg,var(--primary),var(--secondary));
+                              -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+                              background-clip:text;margin:.2rem 0">
+                    {{ fav.logement.prix_formate }}
+                  </div>
+                  <div class="text-muted d-flex align-items-center gap-1"
+                       style="font-size:.75rem">
+                    <svg data-lucide="map-pin" style="width:12px;height:12px;color:var(--primary)"></svg>
+                    {% if fav.logement.quartier %}{{ fav.logement.quartier.nom }}, {% endif %}
+                    {{ fav.logement.ville.nom }}
+                  </div>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div class="text-center py-5">
+            <svg data-lucide="heart" style="width:48px;height:48px;color:var(--gray-200);margin-bottom:1rem"></svg>
+            <p class="text-muted mb-3">Aucun favori pour l'instant.</p>
+            <a href="{% url 'logements:recherche' %}" class="btn btn-primary btn-sm">
+              Explorer les logements
+            </a>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── Sidebar droite ────────────────────────── -->
+    <div class="col-lg-4">
+
+      <!-- Profil rapide -->
+      <div class="card border-0 shadow-sm rounded-4 mb-3">
+        <div class="card-body p-4">
+          <div class="d-flex align-items-center gap-3 mb-3">
+            <img src="{{ user.get_avatar_url }}"
+                 class="rounded-circle border"
+                 width="56" height="56"
+                 style="object-fit:cover">
+            <div>
+              <div class="fw-bold">{{ user.get_full_name }}</div>
+              <div class="text-muted small">{{ user.email }}</div>
+              <span class="badge mt-1"
+                    style="background:var(--primary-light);color:var(--primary);
+                           font-size:.7rem">
+                {{ user.get_role_display }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Complétude profil -->
+          {% with pct=75 %}
+          <div class="mb-2 d-flex justify-content-between">
+            <small class="fw-semibold">Profil complété</small>
+            <small class="text-muted">{{ pct }}%</small>
+          </div>
+          <div class="progress mb-3" style="height:6px;border-radius:3px">
+            <div class="progress-bar"
+                 style="width:{{ pct }}%;background:linear-gradient(90deg,var(--primary),var(--secondary))">
+            </div>
+          </div>
+          {% endwith %}
+
+          <a href="{% url 'accounts:profil' %}"
+             class="btn btn-outline-primary btn-sm w-100">
+            <svg data-lucide="pencil" style="width:14px;height:14px;margin-right:5px"></svg>
+            Modifier le profil
+          </a>
+        </div>
+      </div>
+
+      <!-- Réservations récentes -->
+      <div class="card border-0 shadow-sm rounded-4">
+        <div class="card-header bg-white border-bottom py-3 rounded-top-4">
+          <h6 class="fw-bold mb-0 d-flex align-items-center gap-2">
+            <svg data-lucide="calendar" style="width:16px;height:16px;color:var(--primary)"></svg>
+            Mes demandes récentes
+          </h6>
+        </div>
+        <div class="card-body p-0">
+          {% for res in reservations %}
+          <div class="p-3 border-bottom d-flex justify-content-between align-items-start">
+            <div>
+              <div class="fw-semibold small">
+                {{ res.logement.titre|truncatechars:30 }}
+              </div>
+              <div class="text-muted d-flex align-items-center gap-1 mt-1"
+                   style="font-size:.75rem">
+                <svg data-lucide="calendar" style="width:11px;height:11px"></svg>
+                {{ res.date_debut|date:"d/m/Y" }}
+              </div>
+            </div>
+            <span class="badge rounded-pill"
+                  style="font-size:.68rem;
+                  {% if res.statut == 'CONFIRME' %}background:#d1fae5;color:#065f46
+                  {% elif res.statut == 'EN_ATTENTE' %}background:#fef3c7;color:#92400e
+                  {% elif res.statut == 'REFUSE' %}background:#fee2e2;color:#991b1b
+                  {% else %}background:var(--gray-100);color:var(--gray-500){% endif %}">
+              {{ res.get_statut_display }}
+            </span>
+          </div>
+          {% empty %}
+          <div class="text-center py-4 text-muted small">
+            Aucune réservation.
+          </div>
+          {% endfor %}
+          {% if reservations %}
+          <div class="p-2 text-center">
+            <a href="{% url 'accounts:mes_reservations' %}"
+               class="text-primary small fw-semibold">
+              Voir toutes les réservations
+              <svg data-lucide="arrow-right" style="width:13px;height:13px;margin-left:3px"></svg>
+            </a>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ─── Suggestions personnalisées ───────────────── -->
+  <div class="mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h5 class="fw-bold mb-0">
+        <svg data-lucide="sparkles" style="width:18px;height:18px;color:var(--warning);margin-right:6px;vertical-align:-3px"></svg>
+        Logements recommandés pour vous
+      </h5>
+      <a href="{% url 'logements:recherche' %}"
+         class="btn btn-sm btn-outline-primary">
+        Voir tout
+      </a>
+    </div>
+
+    {% load logements_tags %}
+    {% recommandations_locataire request.user as logements_suggeres %}
+
+    <div class="row g-3">
+      {% for logement in logements_suggeres %}
+      <div class="col-lg-3 col-md-6">
+        {% include 'logements/includes/card_logement.html' %}
+      </div>
+      {% empty %}
+      <div class="col-12">
+        <div class="text-center py-4 text-muted">
+          <svg data-lucide="home" style="width:40px;height:40px;color:var(--gray-200);margin-bottom:.75rem"></svg>
+          <p class="small">Commencez à rechercher des logements pour obtenir des recommandations personnalisées.</p>
+          <a href="{% url 'logements:recherche' %}" class="btn btn-primary btn-sm">
+            Explorer les logements
+          </a>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}

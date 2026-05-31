@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+{% load humanize %}
+{% block title %}Paiement{% endblock %}
+
+{% block content %}
+<div class="container py-5" style="max-width:560px">
+  <div class="card border-0 shadow rounded-4 overflow-hidden">
+
+    <div class="p-3 text-center text-white fw-bold fs-5"
+         style="background:linear-gradient(135deg,#16a34a,#15803d)">
+      💳 Paiement sécurisé
+    </div>
+
+    <div class="card-body p-4">
+
+      <!-- Récapitulatif -->
+      <div class="p-3 rounded-3 mb-4 bg-primary bg-opacity-10">
+        <div class="fw-bold mb-1">{{ reservation.logement.titre }}</div>
+        <div class="text-muted small">
+          {{ reservation.logement.ville.nom }}
+          {% if reservation.logement.quartier %}
+          · {{ reservation.logement.quartier.nom }}
+          {% endif %}
+        </div>
+        <div class="d-flex justify-content-between mt-2">
+          <span class="text-muted small">Montant total</span>
+          <strong class="text-primary fs-5">
+            {{ reservation.logement.prix_formate }}
+          </strong>
+        </div>
+      </div>
+
+      <form method="post">
+        {% csrf_token %}
+
+        <!-- Méthode de paiement -->
+        <div class="mb-4">
+          <label class="form-label fw-semibold">
+            Méthode de paiement
+          </label>
+          <div class="row g-2">
+            <div class="col-6">
+              <label class="d-flex align-items-center gap-2 p-3
+                            border rounded-3"
+                     style="cursor:pointer">
+                <input type="radio"
+                       name="methode"
+                       value="MTN_MOMO"
+                       checked>
+                <div>
+                  <div class="fw-bold small">MTN Mobile Money</div>
+                  <div class="text-muted" style="font-size:.75rem">
+                    MTN Cameroun
+                  </div>
+                </div>
+              </label>
+            </div>
+            <div class="col-6">
+              <label class="d-flex align-items-center gap-2 p-3
+                            border rounded-3"
+                     style="cursor:pointer">
+                <input type="radio"
+                       name="methode"
+                       value="ORANGE_MONEY">
+                <div>
+                  <div class="fw-bold small">Orange Money</div>
+                  <div class="text-muted" style="font-size:.75rem">
+                    Orange Cameroun
+                  </div>
+                </div>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Numéro -->
+        <div class="mb-4">
+          <label class="form-label fw-semibold">
+            Numéro Mobile Money
+          </label>
+          <input type="tel"
+                 name="telephone"
+                 class="form-control form-control-lg"
+                 placeholder="Ex: 6XX XXX XXX"
+                 required>
+          <small class="text-muted">
+            Un code de confirmation sera envoyé à ce numéro
+          </small>
+        </div>
+
+        <!-- Sécurité -->
+        <div class="d-flex align-items-center gap-2 text-muted small mb-4">
+          <i class="bi bi-shield-lock-fill text-success fs-5"></i>
+          <span>Transaction sécurisée · Données chiffrées</span>
+        </div>
+
+        <button type="submit"
+                class="btn btn-success w-100 py-2 fw-bold fs-5">
+          <i class="bi bi-lock-fill me-2"></i>
+          Payer {{ reservation.logement.prix_formate }}
+        </button>
+
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

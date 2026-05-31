@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% load humanize %}
+{% block title %}Historique paiements{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <h2 class="fw-bold mb-4">💰 Historique des paiements</h2>
+
+  <div class="card border-0 shadow-sm rounded-4">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light small text-muted">
+            <tr>
+              <th>Référence</th>
+              <th>Type</th>
+              <th>Méthode</th>
+              <th>Montant</th>
+              <th>Statut</th>
+              <th>Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in paiements %}
+            <tr>
+              <td class="small fw-semibold">{{ p.reference }}</td>
+              <td>
+                <span class="badge bg-light text-dark border">
+                  {{ p.get_type_paiement_display }}
+                </span>
+              </td>
+              <td class="small">{{ p.get_methode_display }}</td>
+              <td class="fw-bold text-primary">
+                {{ p.montant|intcomma }} FCFA
+              </td>
+              <td>
+                {% if p.statut == 'REUSSI' %}
+                <span class="badge bg-success">✅ Réussi</span>
+                {% elif p.statut == 'EN_ATTENTE' %}
+                <span class="badge bg-warning text-dark">⏳ En attente</span>
+                {% elif p.statut == 'ECHOUE' %}
+                <span class="badge bg-danger">❌ Échoué</span>
+                {% else %}
+                <span class="badge bg-secondary">
+                  {{ p.get_statut_display }}
+                </span>
+                {% endif %}
+              </td>
+              <td class="small text-muted">
+                {{ p.cree_le|date:"d/m/Y H:i" }}
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="6" class="text-center py-4 text-muted">
+                Aucun paiement enregistré.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

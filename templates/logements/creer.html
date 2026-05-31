@@ -1,0 +1,374 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Publier une annonce{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-9">
+
+      <!-- En-tête -->
+      <div class="mb-4">
+        <nav aria-label="breadcrumb">
+          <ol class="breadcrumb small">
+            <li class="breadcrumb-item">
+              <a href="{% url 'logements:accueil' %}">Accueil</a>
+            </li>
+            <li class="breadcrumb-item">
+              <a href="{% url 'accounts:dashboard_bailleur' %}">Mon espace</a>
+            </li>
+            <li class="breadcrumb-item active">Publier</li>
+          </ol>
+        </nav>
+        <h2 class="fw-bold mb-0">📝 Publier une annonce</h2>
+        <p class="text-muted">
+          Remplissez les informations de votre logement.
+          Votre annonce sera validée sous 24h.
+        </p>
+      </div>
+
+      <form method="post" enctype="multipart/form-data" novalidate>
+        {% csrf_token %}
+
+        <!-- ─── Bloc 1 : Informations générales ────────── -->
+        <div class="card border-0 shadow-sm rounded-4 mb-4">
+          <div class="card-header bg-primary text-white fw-bold py-3 rounded-top-4">
+            <i class="bi bi-info-circle me-2"></i>1. Informations générales
+          </div>
+          <div class="card-body p-4">
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Titre de l'annonce *</label>
+              {{ form.titre }}
+              <small class="text-muted">
+                Ex : "Bel appartement F3 meublé à Bastos Yaoundé"
+              </small>
+            </div>
+
+            <div class="row g-3 mb-3">
+              <div class="col-md-4">
+                <label class="form-label fw-semibold">Type de logement *</label>
+                {{ form.type_logement }}
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-semibold">Type d'offre *</label>
+                {{ form.type_offre }}
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-semibold">Standing</label>
+                {{ form.standing }}
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Description *</label>
+              {{ form.description }}
+              <small class="text-muted">
+                Décrivez votre logement : état, environnement, points forts...
+              </small>
+            </div>
+
+            <div>
+              <label class="form-label fw-semibold">Meublé ?</label>
+              {{ form.meuble }}
+            </div>
+
+          </div>
+        </div>
+
+        <!-- ─── Bloc 2 : Localisation ───────────────────── -->
+        <div class="card border-0 shadow-sm rounded-4 mb-4">
+          <div class="card-header bg-success text-white fw-bold py-3 rounded-top-4">
+            <i class="bi bi-geo-alt me-2"></i>2. Localisation
+          </div>
+          <div class="card-body p-4">
+
+            <div class="row g-3 mb-3">
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Ville *</label>
+                {{ form.ville }}
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Quartier</label>
+                {{ form.quartier }}
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Adresse complète *</label>
+              {{ form.adresse }}
+            </div>
+
+            <!-- Carte pour pointer la position -->
+            <div class="mb-3">
+              <label class="form-label fw-semibold">
+                Position sur la carte
+                <span class="text-muted fw-normal small">
+                  (cliquez pour marquer)
+                </span>
+              </label>
+              <div id="map-creer"
+                   style="height:300px;border-radius:12px;
+                          border:1px solid #e2e8f0">
+              </div>
+            </div>
+
+            {{ form.latitude }}
+            {{ form.longitude }}
+
+          </div>
+        </div>
+
+        <!-- ─── Bloc 3 : Caractéristiques ──────────────── -->
+        <div class="card border-0 shadow-sm rounded-4 mb-4">
+          <div class="card-header bg-info text-white fw-bold py-3 rounded-top-4">
+            <i class="bi bi-list-check me-2"></i>3. Caractéristiques
+          </div>
+          <div class="card-body p-4">
+            <div class="row g-3">
+              <div class="col-md-3">
+                <label class="form-label fw-semibold">Chambres *</label>
+                {{ form.nb_chambres }}
+              </div>
+              <div class="col-md-3">
+                <label class="form-label fw-semibold">Salles de bain</label>
+                {{ form.nb_salles_bain }}
+              </div>
+              <div class="col-md-3">
+                <label class="form-label fw-semibold">Surface (m²)</label>
+                {{ form.surface }}
+              </div>
+              <div class="col-md-3">
+                <label class="form-label fw-semibold">Étage</label>
+                {{ form.etage }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ─── Bloc 4 : Prix ───────────────────────────── -->
+        <div class="card border-0 shadow-sm rounded-4 mb-4">
+          <div class="card-header bg-warning text-dark fw-bold py-3 rounded-top-4">
+            <i class="bi bi-currency-dollar me-2"></i>4. Prix et conditions
+          </div>
+          <div class="card-body p-4">
+
+            <div class="row g-3 mb-3">
+              <div class="col-md-4">
+                <label class="form-label fw-semibold">Prix (FCFA) *</label>
+                {{ form.prix }}
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-semibold">Charges (FCFA)</label>
+                {{ form.charges }}
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-semibold">Caution (FCFA)</label>
+                {{ form.caution }}
+              </div>
+            </div>
+
+            <div class="d-flex gap-4 flex-wrap mb-3">
+              <div class="form-check">
+                {{ form.prix_negociable }}
+                <label class="form-check-label">Prix négociable</label>
+              </div>
+              <div class="form-check">
+                {{ form.disponible }}
+                <label class="form-check-label">Disponible maintenant</label>
+              </div>
+            </div>
+
+            <div>
+              <label class="form-label fw-semibold">
+                Date de disponibilité
+                <span class="text-muted fw-normal small">(si pas immédiate)</span>
+              </label>
+              {{ form.date_disponibilite }}
+            </div>
+
+          </div>
+        </div>
+
+        <!-- ─── Bloc 5 : Équipements ────────────────────── -->
+        <div class="card border-0 shadow-sm rounded-4 mb-4">
+          <div class="card-header bg-secondary text-white fw-bold py-3 rounded-top-4">
+            <i class="bi bi-tools me-2"></i>5. Équipements disponibles
+          </div>
+          <div class="card-body p-4">
+            <div class="row g-3">
+              <div class="col-md-3 col-6">
+                <div class="form-check">
+                  {{ form.eau_courante }}
+                  <label class="form-check-label small">Eau courante</label>
+                </div>
+              </div>
+              <div class="col-md-3 col-6">
+                <div class="form-check">
+                  {{ form.electricite }}
+                  <label class="form-check-label small">Électricité</label>
+                </div>
+              </div>
+              <div class="col-md-3 col-6">
+                <div class="form-check">
+                  {{ form.internet }}
+                  <label class="form-check-label small">WiFi</label>
+                </div>
+              </div>
+              <div class="col-md-3 col-6">
+                <div class="form-check">
+                  {{ form.climatisation }}
+                  <label class="form-check-label small">Climatisation</label>
+                </div>
+              </div>
+              <div class="col-md-3 col-6">
+                <div class="form-check">
+                  {{ form.parking }}
+                  <label class="form-check-label small">Parking</label>
+                </div>
+              </div>
+              <div class="col-md-3 col-6">
+                <div class="form-check">
+                  {{ form.gardien }}
+                  <label class="form-check-label small">Gardien</label>
+                </div>
+              </div>
+              <div class="col-md-3 col-6">
+                <div class="form-check">
+                  {{ form.generateur }}
+                  <label class="form-check-label small">Groupe électrogène</label>
+                </div>
+              </div>
+              <div class="col-md-3 col-6">
+                <div class="form-check">
+                  {{ form.piscine }}
+                  <label class="form-check-label small">Piscine</label>
+                </div>
+              </div>
+              <div class="col-md-3 col-6">
+                <div class="form-check">
+                  {{ form.cuisine_equipee }}
+                  <label class="form-check-label small">Cuisine équipée</label>
+                </div>
+              </div>
+              <div class="col-md-3 col-6">
+                <div class="form-check">
+                  {{ form.balcon }}
+                  <label class="form-check-label small">Balcon</label>
+                </div>
+              </div>
+              <div class="col-md-3 col-6">
+                <div class="form-check">
+                  {{ form.securite }}
+                  <label class="form-check-label small">Sécurité</label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ─── Bloc 6 : Photos ─────────────────────────── -->
+        <div class="card border-0 shadow-sm rounded-4 mb-4">
+          <div class="card-header bg-dark text-white fw-bold py-3 rounded-top-4">
+            <i class="bi bi-images me-2"></i>6. Photos du logement
+          </div>
+          <div class="card-body p-4">
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold">
+                Ajouter des photos
+                <span class="text-muted fw-normal small">
+                  (max 10, formats JPG/PNG, 10MB max)
+                </span>
+              </label>
+              <input type="file"
+                     name="photos"
+                     class="form-control"
+                     multiple
+                     accept="image/jpeg,image/png,image/webp"
+                     id="photosInput">
+            </div>
+
+            <!-- Prévisualisation -->
+            <div id="photosPreview" class="d-flex flex-wrap gap-2 mt-2"></div>
+
+            <div class="alert alert-info small mt-3 mb-0">
+              <i class="bi bi-lightbulb me-2"></i>
+              <strong>Conseil :</strong>
+              La première photo sera l'image principale.
+              Les annonces avec photos reçoivent 5× plus de contacts !
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Boutons -->
+        <div class="d-flex gap-3 justify-content-end">
+          <a href="{% url 'accounts:dashboard_bailleur' %}"
+             class="btn btn-outline-secondary px-4">
+            Annuler
+          </a>
+          <button type="submit" class="btn btn-primary px-5 fw-semibold">
+            <i class="bi bi-send me-2"></i>Soumettre l'annonce
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Leaflet -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+// ─── Prévisualisation photos ──────────────────────────
+document.getElementById('photosInput').addEventListener('change', function() {
+  const preview = document.getElementById('photosPreview');
+  preview.innerHTML = '';
+  Array.from(this.files).slice(0, 10).forEach((file, i) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const div = document.createElement('div');
+      div.style.cssText = 'position:relative;width:100px;height:80px';
+      div.innerHTML = `
+        <img src="${e.target.result}"
+             style="width:100px;height:80px;object-fit:cover;
+                    border-radius:8px;border:2px solid
+                    ${i === 0 ? '#2563eb' : '#e2e8f0'}">
+        ${i === 0
+          ? '<span style="position:absolute;top:4px;left:4px;background:#2563eb;color:#fff;font-size:.6rem;padding:1px 6px;border-radius:10px">Principal</span>'
+          : ''}`;
+      preview.appendChild(div);
+    };
+    reader.readAsDataURL(file);
+  });
+});
+
+// ─── Carte Leaflet ────────────────────────────────────
+const mapCreer = L.map('map-creer').setView([3.848, 11.502], 13);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '© OpenStreetMap',
+  maxZoom: 19
+}).addTo(mapCreer);
+
+let marker;
+mapCreer.on('click', function(e) {
+  if (marker) mapCreer.removeLayer(marker);
+  marker = L.marker(e.latlng).addTo(mapCreer)
+    .bindPopup('Position du logement').openPopup();
+  document.getElementById('id_latitude').value  = e.latlng.lat.toFixed(6);
+  document.getElementById('id_longitude').value = e.latlng.lng.toFixed(6);
+});
+
+// Géolocalisation navigateur
+if (navigator.geolocation) {
+  navigator.geolocation.getCurrentPosition(pos => {
+    mapCreer.setView([pos.coords.latitude, pos.coords.longitude], 15);
+  });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,332 @@
+{% extends 'base.html' %}
+{% load static humanize %}
+{% block title %}Accueil{% endblock %}
+
+{% block content %}
+
+<!-- ─── Hero ─────────────────────────────────────────── -->
+<section style="background:linear-gradient(135deg,#1e3a8a,#2563eb);padding:80px 0 60px">
+  <div class="container">
+    <div class="row align-items-center">
+
+      <!-- Texte -->
+      <div class="col-lg-6 text-white mb-4 mb-lg-0">
+        <span class="badge bg-white text-primary fw-semibold mb-3 px-3 py-2">
+          <i class="bi bi-stars me-1"></i>Plateforme N°1 au Cameroun
+        </span>
+        <h1 class="fw-bold mb-3" style="font-size:2.8rem">
+          Trouvez votre<br>
+          <span style="color:#93c5fd">logement idéal</span><br>
+          au Cameroun 🏠
+        </h1>
+        <p class="mb-4 fs-5" style="opacity:.85">
+          Studios, appartements, villas... Recherche intelligente
+          par quartier, budget et équipements.
+        </p>
+
+        <!-- Stats -->
+        <div class="row g-3">
+          <div class="col-4">
+            <div class="text-center p-3 rounded-3"
+                 style="background:rgba(255,255,255,.12)">
+              <div class="fw-bold fs-4">{{ stats.nb_logements }}</div>
+              <small style="opacity:.8">Logements</small>
+            </div>
+          </div>
+          <div class="col-4">
+            <div class="text-center p-3 rounded-3"
+                 style="background:rgba(255,255,255,.12)">
+              <div class="fw-bold fs-4">{{ stats.nb_villes }}+</div>
+              <small style="opacity:.8">Villes</small>
+            </div>
+          </div>
+          <div class="col-4">
+            <div class="text-center p-3 rounded-3"
+                 style="background:rgba(255,255,255,.12)">
+              <div class="fw-bold fs-4">24/7</div>
+              <small style="opacity:.8">Chatbot IA</small>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Formulaire recherche -->
+      <div class="col-lg-6">
+        <div class="bg-white rounded-4 p-4 shadow-lg">
+          <h5 class="fw-bold text-dark mb-3">
+            <i class="bi bi-search text-primary me-2"></i>Recherche rapide
+          </h5>
+          <form action="{% url 'logements:recherche' %}" method="get">
+            <div class="mb-3">
+              <input type="text" name="q" class="form-control form-control-lg"
+                     placeholder="Quartier, ville, type de logement...">
+            </div>
+            <div class="row g-2 mb-3">
+              <div class="col-6">
+                <select name="type_offre" class="form-select">
+                  <option value="">Location / Vente</option>
+                  <option value="LOCATION">À louer</option>
+                  <option value="VENTE">À vendre</option>
+                  <option value="COURTE_DUREE">Court séjour</option>
+                </select>
+              </div>
+              <div class="col-6">
+                <select name="type_logement" class="form-select">
+                  <option value="">Tous types</option>
+                  <option value="STUDIO">Studio</option>
+                  <option value="APPARTEMENT">Appartement</option>
+                  <option value="VILLA">Villa</option>
+                  <option value="MAISON">Maison</option>
+                </select>
+              </div>
+            </div>
+            <div class="row g-2 mb-3">
+              <div class="col-6">
+                <input type="number" name="prix_min" class="form-control"
+                       placeholder="Prix min (FCFA)">
+              </div>
+              <div class="col-6">
+                <input type="number" name="prix_max" class="form-control"
+                       placeholder="Prix max (FCFA)">
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold fs-5">
+              <i class="bi bi-search me-2"></i>Rechercher
+            </button>
+          </form>
+          <div class="text-center mt-3">
+            <small class="text-muted">
+              Ou essayez notre
+              <a href="{% url 'chat:chatbot' %}" class="text-primary fw-semibold">
+                <i class="bi bi-robot me-1"></i>Chatbot IA
+              </a>
+            </small>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ─── Recherches populaires ────────────────────────── -->
+<div class="bg-white border-bottom py-3">
+  <div class="container">
+    <div class="d-flex flex-wrap gap-2 align-items-center">
+      <small class="text-muted fw-semibold me-2">Populaires :</small>
+      <a href="{% url 'logements:recherche' %}?q=Studio+Yaoundé"
+         class="badge bg-light text-dark border fw-normal px-3 py-2">
+         Studio Yaoundé
+      </a>
+      <a href="{% url 'logements:recherche' %}?q=Villa+Bastos"
+         class="badge bg-light text-dark border fw-normal px-3 py-2">
+         Villa Bastos
+      </a>
+      <a href="{% url 'logements:recherche' %}?q=Appartement+Douala"
+         class="badge bg-light text-dark border fw-normal px-3 py-2">
+         Appartement Douala
+      </a>
+      <a href="{% url 'logements:recherche' %}?prix_max=50000"
+         class="badge bg-light text-dark border fw-normal px-3 py-2">
+         Moins de 50 000 FCFA
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Logements en vedette ─────────────────────────── -->
+{% if logements_vedette %}
+<section class="py-5">
+  <div class="container">
+    <div class="d-flex justify-content-between align-items-end mb-4">
+      <div>
+        <h2 class="fw-bold mb-1">⭐ En vedette</h2>
+        <p class="text-muted mb-0">Sélection premium vérifiée</p>
+      </div>
+      <a href="{% url 'logements:recherche' %}"
+         class="btn btn-outline-primary btn-sm">
+        Voir tout <i class="bi bi-arrow-right ms-1"></i>
+      </a>
+    </div>
+    <div class="row g-3">
+      {% for logement in logements_vedette %}
+      <div class="col-lg-4 col-md-6">
+        {% include 'logements/includes/card_logement.html' %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
+<!-- ─── Chercher par ville ────────────────────────────── -->
+<section class="py-5 bg-light">
+  <div class="container">
+    <div class="text-center mb-4">
+      <h2 class="fw-bold mb-1">🌍 Explorer par ville</h2>
+      <p class="text-muted">Les principales villes du Cameroun</p>
+    </div>
+    <div class="row g-3">
+      {% for ville in villes_populaires %}
+      <div class="col-lg-3 col-md-4 col-6">
+        <a href="{% url 'logements:recherche' %}?ville={{ ville.nom }}"
+           class="card border-0 shadow-sm rounded-4 p-4 text-center
+                  text-decoration-none text-dark h-100"
+           style="transition:.2s"
+           onmouseover="this.style.background='#2563eb';this.style.color='#fff'"
+           onmouseout="this.style.background='';this.style.color=''">
+          <div class="fs-2 mb-2">
+            {% if ville.nom == "Yaoundé" %}🏛️
+            {% elif ville.nom == "Douala" %}🌊
+            {% elif ville.nom == "Bafoussam" %}🏔️
+            {% else %}🌆{% endif %}
+          </div>
+          <div class="fw-bold">{{ ville.nom }}</div>
+          <div class="text-muted small mt-1">
+            {{ ville.nb }} annonce{{ ville.nb|pluralize }}
+          </div>
+        </a>
+      </div>
+      {% empty %}
+      <div class="col-12 text-center text-muted py-4">
+        Aucune ville disponible.
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- ─── Dernières annonces ────────────────────────────── -->
+<section class="py-5">
+  <div class="container">
+    <div class="d-flex justify-content-between align-items-end mb-4">
+      <div>
+        <h2 class="fw-bold mb-1">🆕 Nouvelles annonces</h2>
+        <p class="text-muted mb-0">Ajoutées récemment</p>
+      </div>
+      <a href="{% url 'logements:recherche' %}?tri=recent"
+         class="btn btn-outline-primary btn-sm">Voir tout</a>
+    </div>
+    <div class="row g-3">
+      {% for logement in logements_recents %}
+      <div class="col-lg-3 col-md-6">
+        {% include 'logements/includes/card_logement.html' %}
+      </div>
+      {% empty %}
+      <div class="col-12 text-center py-5">
+        <div class="fs-1 mb-3">🏗️</div>
+        <h5 class="text-muted">Aucun logement disponible.</h5>
+        {% if user.is_authenticated and user.est_bailleur %}
+        <a href="{% url 'logements:creer' %}" class="btn btn-primary mt-3">
+          Publier la première annonce
+        </a>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- ─── Bannière Chatbot ──────────────────────────────── -->
+<section class="py-5" style="background:linear-gradient(135deg,#1e3a8a,#2563eb)">
+  <div class="container text-center text-white">
+    <div class="fs-1 mb-3">🤖</div>
+    <h2 class="fw-bold mb-2">Essayez notre Chatbot IA</h2>
+    <p class="mb-4 fs-5" style="opacity:.85">
+      Décrivez ce que vous cherchez en français naturel
+    </p>
+    <div class="d-flex justify-content-center gap-3 flex-wrap mb-4">
+      <div class="px-3 py-2 rounded-3 fst-italic"
+           style="background:rgba(255,255,255,.15)">
+        "Studio meublé à Bastos 80 000 FCFA"
+      </div>
+      <div class="px-3 py-2 rounded-3 fst-italic"
+           style="background:rgba(255,255,255,.15)">
+        "Villa avec gardien à Douala"
+      </div>
+    </div>
+    <a href="{% url 'chat:chatbot' %}"
+       class="btn btn-light btn-lg px-5 fw-bold">
+      <i class="bi bi-robot me-2"></i>Essayer — C'est gratuit !
+    </a>
+  </div>
+</section>
+
+<!-- ─── Avantages ────────────────────────────────────── -->
+<section class="py-5 bg-light">
+  <div class="container">
+    <div class="text-center mb-5">
+      <h2 class="fw-bold">Pourquoi LogementCM ?</h2>
+    </div>
+    <div class="row g-4 text-center">
+      <div class="col-lg-4 col-md-6">
+        <div class="p-4">
+          <div class="fs-2 mb-3">🔍</div>
+          <h5 class="fw-bold">Recherche Intelligente</h5>
+          <p class="text-muted small">Moteur IA qui comprend vos besoins en français naturel</p>
+        </div>
+      </div>
+      <div class="col-lg-4 col-md-6">
+        <div class="p-4">
+          <div class="fs-2 mb-3">📍</div>
+          <h5 class="fw-bold">Carte Interactive</h5>
+          <p class="text-muted small">Visualisez les logements sur une carte en temps réel</p>
+        </div>
+      </div>
+      <div class="col-lg-4 col-md-6">
+        <div class="p-4">
+          <div class="fs-2 mb-3">🛡️</div>
+          <h5 class="fw-bold">Annonces Vérifiées</h5>
+          <p class="text-muted small">Chaque bailleur est contrôlé. Zéro arnaque garantie</p>
+        </div>
+      </div>
+      <div class="col-lg-4 col-md-6">
+        <div class="p-4">
+          <div class="fs-2 mb-3">💬</div>
+          <h5 class="fw-bold">Chat Instantané</h5>
+          <p class="text-muted small">Contactez le bailleur directement depuis la plateforme</p>
+        </div>
+      </div>
+      <div class="col-lg-4 col-md-6">
+        <div class="p-4">
+          <div class="fs-2 mb-3">📱</div>
+          <h5 class="fw-bold">100% Mobile</h5>
+          <p class="text-muted small">Interface optimisée pour smartphone et tablette</p>
+        </div>
+      </div>
+      <div class="col-lg-4 col-md-6">
+        <div class="p-4">
+          <div class="fs-2 mb-3">💳</div>
+          <h5 class="fw-bold">Mobile Money</h5>
+          <p class="text-muted small">MTN Momo et Orange Money intégrés</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── CTA Bailleur ─────────────────────────────────── -->
+<section class="py-5">
+  <div class="container">
+    <div class="row align-items-center g-4 p-4 rounded-4 bg-primary bg-opacity-10">
+      <div class="col-lg-8">
+        <h3 class="fw-bold text-primary">Vous êtes bailleur ?</h3>
+        <p class="text-muted mb-0">
+          Publiez vos annonces gratuitement et atteignez des milliers de locataires.
+        </p>
+      </div>
+      <div class="col-lg-4 text-lg-end">
+        <a href="{% if user.is_authenticated and user.est_bailleur %}
+                   {% url 'logements:creer' %}
+                 {% else %}
+                   {% url 'accounts:inscription' %}
+                 {% endif %}"
+           class="btn btn-primary btn-lg px-4">
+          <i class="bi bi-building-add me-2"></i>Démarrer gratuitement
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+{% endblock %}
