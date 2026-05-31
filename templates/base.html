@@ -1,45 +1,56 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}LogementCM{% endblock %} | LogementCM 🏠</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}LogementCM{% endblock %} | LogementCM 🏠</title>
 
-    <!-- Bootstrap 5 -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Bootstrap Icons -->
-    <!-- Lucide Icons — 100% JavaScript -->
-    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <!-- Lucide Icons 100% JavaScript -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 
-    {% load static %}
-    <link rel="stylesheet" href="{% static 'css/main.css' %}">
-    {% block extra_css %}{% endblock %}
+  {% load static %}
+  <link rel="stylesheet" href="{% static 'css/main.css' %}">
+  {% block extra_css %}{% endblock %}
 </head>
 <body>
+
+<!-- ─── Navbar ─────────────────────────────────────────── -->
 <nav class="navbar navbar-expand-lg sticky-top">
   <div class="container">
 
     <!-- Logo -->
     <a class="navbar-brand" href="{% url 'logements:accueil' %}">
-      <svg data-lucide="home" style="width:22px;height:22px;margin-right:6px;vertical-align:-3px"></svg>
-      Logement<span style="background:linear-gradient(135deg,#6366f1,#8b5cf6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">CM</span>
+      <svg data-lucide="home"
+           style="width:22px;height:22px;margin-right:6px;vertical-align:-3px;color:#6366f1">
+      </svg>
+      Logement<span style="background:linear-gradient(135deg,#6366f1,#8b5cf6);
+                           -webkit-background-clip:text;
+                           -webkit-text-fill-color:transparent;
+                           background-clip:text">CM</span>
     </a>
 
-    <button class="navbar-toggler border-0" type="button"
-            data-bs-toggle="collapse" data-bs-target="#navMain">
+    <!-- Toggle mobile -->
+    <button class="navbar-toggler border-0"
+            type="button"
+            data-bs-toggle="collapse"
+            data-bs-target="#navMain">
       <svg data-lucide="menu" style="width:22px;height:22px"></svg>
     </button>
 
     <div class="collapse navbar-collapse" id="navMain">
 
-      <!-- Recherche -->
+      <!-- Recherche rapide -->
       <form class="d-flex mx-auto nav-search"
-            action="{% url 'logements:recherche' %}" method="get">
+            action="{% url 'logements:recherche' %}"
+            method="get">
         <div class="input-group input-group-sm">
           <input class="form-control"
-                 type="search" name="q"
+                 type="search"
+                 name="q"
                  placeholder="Rechercher un logement..."
                  value="{{ request.GET.q }}">
           <button class="btn btn-primary" type="submit">
@@ -50,20 +61,34 @@
 
       <ul class="navbar-nav ms-auto align-items-center gap-1">
 
-        <!-- Recherche -->
+        <!-- Rechercher -->
         <li class="nav-item">
           <a class="nav-link" href="{% url 'logements:recherche' %}">
-            <svg data-lucide="search" style="width:16px;height:16px;margin-right:5px;vertical-align:-2px"></svg>
+            <svg data-lucide="search"
+                 style="width:16px;height:16px;margin-right:5px;vertical-align:-2px">
+            </svg>
             Rechercher
+          </a>
+        </li>
+
+        <!-- Carte -->
+        <li class="nav-item">
+          <a class="nav-link" href="{% url 'logements:carte' %}">
+            <svg data-lucide="map"
+                 style="width:16px;height:16px;margin-right:5px;vertical-align:-2px">
+            </svg>
+            Carte
           </a>
         </li>
 
         {% if user.is_authenticated %}
 
-        <!-- Chatbot -->
+        <!-- Chatbot IA -->
         <li class="nav-item">
           <a class="nav-link" href="{% url 'chat:chatbot' %}">
-            <svg data-lucide="bot" style="width:16px;height:16px;margin-right:5px;vertical-align:-2px"></svg>
+            <svg data-lucide="bot"
+                 style="width:16px;height:16px;margin-right:5px;vertical-align:-2px">
+            </svg>
             Chatbot IA
           </a>
         </li>
@@ -71,24 +96,30 @@
         <!-- Messages -->
         <li class="nav-item">
           <a class="nav-link" href="{% url 'chat:conversations' %}">
-            <svg data-lucide="message-circle" style="width:20px;height:20px;vertical-align:-4px"></svg>
+            <svg data-lucide="message-circle"
+                 style="width:20px;height:20px;vertical-align:-4px">
+            </svg>
           </a>
         </li>
 
         <!-- Notifications -->
         <li class="nav-item">
           <a class="nav-link position-relative" href="{% url 'notifs:liste' %}">
-            <svg data-lucide="bell" style="width:20px;height:20px;vertical-align:-4px"></svg>
+            <svg data-lucide="bell"
+                 style="width:20px;height:20px;vertical-align:-4px">
+            </svg>
           </a>
         </li>
 
-        <!-- Profil dropdown -->
+        <!-- Menu profil -->
         <li class="nav-item dropdown">
           <a class="nav-link dropdown-toggle d-flex align-items-center gap-2"
-             href="#" data-bs-toggle="dropdown">
+             href="#"
+             data-bs-toggle="dropdown">
             <img src="{{ user.get_avatar_url }}"
                  class="rounded-circle"
-                 width="32" height="32"
+                 width="32"
+                 height="32"
                  style="object-fit:cover">
             <span class="d-none d-md-inline">{{ user.prenom }}</span>
           </a>
@@ -109,6 +140,20 @@
                  href="{% url 'accounts:profil' %}">
                 <svg data-lucide="user" style="width:16px;height:16px"></svg>
                 Mon profil
+              </a>
+            </li>
+            <li>
+              <a class="dropdown-item d-flex align-items-center gap-2"
+                 href="{% url 'accounts:mes_favoris' %}">
+                <svg data-lucide="heart" style="width:16px;height:16px"></svg>
+                Mes favoris
+              </a>
+            </li>
+            <li>
+              <a class="dropdown-item d-flex align-items-center gap-2"
+                 href="{% url 'accounts:mes_reservations' %}">
+                <svg data-lucide="calendar-check" style="width:16px;height:16px"></svg>
+                Mes réservations
               </a>
             </li>
             {% if user.est_bailleur %}
@@ -133,8 +178,11 @@
 
         {% else %}
 
+        <!-- Non connecté -->
         <li class="nav-item">
-          <a class="nav-link" href="{% url 'accounts:connexion' %}">Connexion</a>
+          <a class="nav-link" href="{% url 'accounts:connexion' %}">
+            Connexion
+          </a>
         </li>
         <li class="nav-item">
           <a class="btn btn-primary btn-sm px-3"
@@ -150,8 +198,7 @@
   </div>
 </nav>
 
-
-<!-- ─── Messages Django ───────────────────────────────── -->
+<!-- ─── Messages Django ─────────────────────────────────── -->
 {% if messages %}
 <div class="container mt-3">
   {% for msg in messages %}
@@ -163,33 +210,160 @@
 </div>
 {% endif %}
 
-<!-- ─── Contenu principal ─────────────────────────────── -->
+<!-- ─── Contenu principal ───────────────────────────────── -->
 <main>
   {% block content %}{% endblock %}
 </main>
 
-<!-- ─── Footer ───────────────────────────────────────── -->
-<footer class="bg-dark text-white mt-5 py-5">
- <div class="d-flex gap-3 mt-3">
-  <a href="#" style="color:var(--gray-400);transition:.2s" onmouseover="this.style.color='#6366f1'" onmouseout="this.style.color='var(--gray-400)'">
-    <svg data-lucide="facebook" style="width:20px;height:20px"></svg>
-  </a>
-  <a href="#" style="color:var(--gray-400);transition:.2s" onmouseover="this.style.color='#6366f1'" onmouseout="this.style.color='var(--gray-400)'">
-    <svg data-lucide="twitter" style="width:20px;height:20px"></svg>
-  </a>
-  <a href="#" style="color:var(--gray-400);transition:.2s" onmouseover="this.style.color='#6366f1'" onmouseout="this.style.color='var(--gray-400)'">
-    <svg data-lucide="instagram" style="width:20px;height:20px"></svg>
-  </a>
-  <a href="#" style="color:var(--gray-400);transition:.2s" onmouseover="this.style.color='#6366f1'" onmouseout="this.style.color='var(--gray-400)'">
-    <svg data-lucide="message-circle" style="width:20px;height:20px"></svg>
-  </a>
-</div>
+<!-- ─── Footer ─────────────────────────────────────────── -->
+<footer class="mt-5 py-5">
+  <div class="container">
+    <div class="row g-4">
+
+      <!-- Logo et description -->
+      <div class="col-lg-4">
+        <h5 class="fw-bold mb-3 d-flex align-items-center gap-2">
+          <svg data-lucide="home" style="width:20px;height:20px;color:#6366f1"></svg>
+          LogementCM
+        </h5>
+        <p style="color:var(--gray-400);font-size:.875rem;line-height:1.7">
+          La plateforme intelligente de recherche de logements au Cameroun.
+          Trouvez votre chez-vous en quelques clics.
+        </p>
+        <!-- Réseaux sociaux -->
+        <div class="d-flex gap-3 mt-3">
+          <a href="#"
+             style="color:var(--gray-400);transition:.2s"
+             onmouseover="this.style.color='#6366f1'"
+             onmouseout="this.style.color='var(--gray-400)'">
+            <svg data-lucide="facebook" style="width:20px;height:20px"></svg>
+          </a>
+          <a href="#"
+             style="color:var(--gray-400);transition:.2s"
+             onmouseover="this.style.color='#6366f1'"
+             onmouseout="this.style.color='var(--gray-400)'">
+            <svg data-lucide="twitter" style="width:20px;height:20px"></svg>
+          </a>
+          <a href="#"
+             style="color:var(--gray-400);transition:.2s"
+             onmouseover="this.style.color='#6366f1'"
+             onmouseout="this.style.color='var(--gray-400)'">
+            <svg data-lucide="instagram" style="width:20px;height:20px"></svg>
+          </a>
+          <a href="#"
+             style="color:var(--gray-400);transition:.2s"
+             onmouseover="this.style.color='#25d366'"
+             onmouseout="this.style.color='var(--gray-400)'">
+            <svg data-lucide="message-circle" style="width:20px;height:20px"></svg>
+          </a>
+        </div>
+      </div>
+
+      <!-- Rechercher -->
+      <div class="col-lg-2 col-6">
+        <h6 class="fw-semibold mb-3" style="color:white">Rechercher</h6>
+        <ul class="list-unstyled">
+          <li class="mb-2">
+            <a href="{% url 'logements:recherche' %}?type_offre=LOCATION">
+              À louer
+            </a>
+          </li>
+          <li class="mb-2">
+            <a href="{% url 'logements:recherche' %}?type_offre=VENTE">
+              À vendre
+            </a>
+          </li>
+          <li class="mb-2">
+            <a href="{% url 'logements:recherche' %}?ville=Yaoundé">
+              Yaoundé
+            </a>
+          </li>
+          <li class="mb-2">
+            <a href="{% url 'logements:recherche' %}?ville=Douala">
+              Douala
+            </a>
+          </li>
+          <li class="mb-2">
+            <a href="{% url 'logements:carte' %}">
+              Carte interactive
+            </a>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Compte -->
+      <div class="col-lg-2 col-6">
+        <h6 class="fw-semibold mb-3" style="color:white">Compte</h6>
+        <ul class="list-unstyled">
+          <li class="mb-2">
+            <a href="{% url 'accounts:inscription' %}">S'inscrire</a>
+          </li>
+          <li class="mb-2">
+            <a href="{% url 'accounts:connexion' %}">Connexion</a>
+          </li>
+          <li class="mb-2">
+            <a href="{% url 'chat:chatbot' %}">Chatbot IA</a>
+          </li>
+          {% if user.is_authenticated %}
+          <li class="mb-2">
+            <a href="{% url 'accounts:mes_favoris' %}">Mes favoris</a>
+          </li>
+          <li class="mb-2">
+            <a href="{% url 'accounts:mes_reservations' %}">Réservations</a>
+          </li>
+          {% endif %}
+        </ul>
+      </div>
+
+      <!-- Contact -->
+      <div class="col-lg-4">
+        <h6 class="fw-semibold mb-3" style="color:white">Contact</h6>
+        <ul class="list-unstyled" style="color:var(--gray-400);font-size:.875rem">
+          <li class="mb-2 d-flex align-items-center gap-2">
+            <svg data-lucide="map-pin" style="width:15px;height:15px;color:#6366f1;flex-shrink:0"></svg>
+            Yaoundé, Cameroun
+          </li>
+          <li class="mb-2 d-flex align-items-center gap-2">
+            <svg data-lucide="phone" style="width:15px;height:15px;color:#6366f1;flex-shrink:0"></svg>
+            +237 653 381189
+          </li>
+          <li class="mb-2 d-flex align-items-center gap-2">
+            <svg data-lucide="mail" style="width:15px;height:15px;color:#6366f1;flex-shrink:0"></svg>
+            contact@logementcm.cm
+          </li>
+        </ul>
+        <span class="badge mt-2"
+              style="background:var(--primary-light);color:var(--primary);
+                     font-size:.72rem;font-weight:700">
+          IAI Cameroun — Projet fin d'études
+        </span>
+      </div>
+
+    </div>
+
+    <hr style="border-color:rgba(255,255,255,.1);margin-top:2rem">
+
+    <div class="d-flex justify-content-between flex-wrap gap-2"
+         style="font-size:.8rem;color:var(--gray-400)">
+      <span>© 2024 LogementCM — Institut Africain d'Informatique</span>
+      <span>Développé avec ❤️ pour le Cameroun 🇨🇲</span>
+    </div>
+
+  </div>
 </footer>
 
 <!-- Bouton retour en haut -->
-<button id="btnTop" class="btn btn-primary rounded-circle shadow"
-        style="position:fixed;bottom:2rem;right:1.5rem;width:44px;height:44px;display:none;z-index:999">
-  <i class="bi bi-arrow-up"></i>
+<button id="btnTop"
+        style="position:fixed;bottom:2rem;right:1.5rem;
+               width:44px;height:44px;background:linear-gradient(135deg,#6366f1,#8b5cf6);
+               border:none;border-radius:50%;color:white;
+               display:none;align-items:center;justify-content:center;
+               cursor:pointer;box-shadow:0 4px 15px rgba(99,102,241,.4);
+               z-index:999;transition:.2s"
+        onmouseover="this.style.transform='translateY(-3px)'"
+        onmouseout="this.style.transform=''"
+        onclick="window.scrollTo({top:0,behavior:'smooth'})">
+  <svg data-lucide="arrow-up" style="width:20px;height:20px"></svg>
 </button>
 
 <!-- Scripts -->
@@ -198,5 +372,14 @@
 <script src="{% static 'js/main.js' %}"></script>
 <script src="{% static 'js/icons.js' %}"></script>
 {% block extra_js %}{% endblock %}
+
+<script>
+  // Bouton retour en haut
+  window.addEventListener('scroll', () => {
+    const btn = document.getElementById('btnTop');
+    if (btn) btn.style.display = window.scrollY > 400 ? 'flex' : 'none';
+  });
+</script>
+
 </body>
 </html>

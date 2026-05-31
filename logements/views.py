@@ -357,3 +357,69 @@ def api_logements_carte(request):
             'url':          f'/logements/{l.slug}/',
         })
     return JsonResponse({'logements': data})
+
+def carte(request):
+    """Page carte interactive complète."""
+    from django.db.models import Q
+    villes    = Ville.objects.filter(actif=True)
+    quartiers = Quartier.objects.select_related('ville').all()
+
+    # Filtres depuis GET
+    ville_id  = request.GET.get('ville')
+    type_offre = request.GET.get('type_offre', '')
+    prix_max  = request.GET.get('prix_max', '')
+    type_log  = request.GET.get('type_logement', '')
+
+    qs = Logement.objects.filter(
+        statut='PUBLIE',
+        disponible=True,
+        latitude__isnull=False,
+        longitude__isnull=False,
+    ).select_related('ville', 'quartier').prefetch_related('photos')
+
+    if ville_id:
+        qs = qs.filter(ville_id=ville_id)
+    if type_offre:
+        qs = qs.filter(type_offre=type_offre)
+    if prix_max:
+        qs = qs.filter(prix__lte=prix_max)
+    if type_log:
+        qs = qs.filter(type_logement=type_log)
+
+    logements_data = []
+    for l in qs[:300]:
+        photo = l.get_photo_principale()
+        logements_data.append({
+            'id':           l.pk,
+            'titre':        l.titre,
+            'prix':         l.prix,
+            'prix_formate': l.prix_formate,
+            'ville':        l.ville.nom,
+            'quartier':     l.quartier.nom if l.quartier else '',
+            'type':         l.get_type_logement_display(),
+            'offre':        l.get_type_offre_display(),
+            'chambres':     l.nb_chambres,
+            'surface':      l.surface or '',
+            'meuble':       l.get_meuble_display(),
+            'lat':          float(l.latitude),
+            'lng':          float(l.longitude),
+            'photo':        photo.image.url if photo else '/static/images/no-image.jpg',
+            'url':          f'/logements/{l.slug}/',
+            'booste':       l.est_booste,
+            'vedette':      l.est_vedette,
+            'wifi':         l.internet,
+            'parking':      l.parking,
+            'piscine':      l.piscine,
+            'gardien':      l.gardien,
+        })
+
+    import json
+    context = {
+        'logements_json': json.dumps(logements_data),
+        'nb_logements':   len(logements_data),
+        'villes':         villes,
+        'quartiers':      quartiers,
+        'type_choices':   Logement.TYPE_CHOICES,
+        'offre_choices':  Logement.OFFRE_CHOICES,
+    }
+    return render(request, 'logements/carte.html', context)

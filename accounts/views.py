@@ -273,7 +273,44 @@ def dashboard_bailleur(request):
     if not request.user.est_bailleur:
         messages.error(request, "Accès refusé.")
         return redirect('accounts:dashboard_locataire')
-    return render(request, 'accounts/dashboard_bailleur.html')
+
+    from logements.models import Logement, Reservation
+
+    # ✅ Queryset de base sans slice
+    logements_qs = Logement.objects.filter(
+        bailleur=request.user
+    ).select_related('ville', 'quartier').prefetch_related('photos')
+
+    # ✅ Statistiques calculées AVANT le slice
+    nb_total      = logements_qs.count()
+    nb_publie     = logements_qs.filter(statut='PUBLIE').count()
+    nb_en_attente = logements_qs.filter(statut='EN_ATTENTE').count()
+    nb_loue       = logements_qs.filter(statut='LOUE').count()
+    total_vues    = sum(l.nb_vues for l in logements_qs)
+    total_favoris = sum(l.nb_favoris for l in logements_qs)
+
+    # ✅ Réservations
+    reservations = Reservation.objects.filter(
+        logement__bailleur=request.user
+    ).select_related('logement', 'locataire').order_by('-cree_le')
+
+    reservations_attente = reservations.filter(statut='EN_ATTENTE').count()
+
+    # ✅ Slice uniquement pour l'affichage, à la fin
+    logements_affichage = logements_qs.order_by('-cree_le')[:8]
+
+    context = {
+        'logements':            logements_affichage,
+        'reservations':         reservations[:10],
+        'nb_total':             nb_total,
+        'nb_publie':            nb_publie,
+        'nb_en_attente':        nb_en_attente,
+        'nb_loue':              nb_loue,
+        'total_vues':           total_vues,
+        'total_favoris':        total_favoris,
+        'reservations_attente': reservations_attente,
+    }
+    return render(request, 'accounts/dashboard_bailleur.html', context)
 
 
 @login_required
@@ -281,7 +318,53 @@ def dashboard_admin(request):
     if not request.user.est_admin:
         messages.error(request, "Accès réservé aux administrateurs.")
         return redirect('accounts:tableau_de_bord')
-    return render(request, 'accounts/dashboard_admin.html')
+
+    from logements.models import Logement, Signalement, Reservation
+    from chat.models import Conversation
+
+    # Statistiques globales
+    nb_utilisateurs  = Utilisateur.objects.filter(is_active=True).count()
+    nb_bailleurs     = Utilisateur.objects.filter(role='BAILLEUR').count()
+    nb_locataires    = Utilisateur.objects.filter(role='LOCATAIRE').count()
+    nb_logements     = Logement.objects.filter(statut='PUBLIE').count()
+    nb_en_attente    = Logement.objects.filter(statut='EN_ATTENTE').count()
+    nb_signalements  = Signalement.objects.filter(traite=False).count()
+    nb_reservations  = Reservation.objects.filter(statut='EN_ATTENTE').count()
+    nb_conversations = Conversation.objects.count()
+
+    # Derniers inscrits
+    derniers_users = Utilisateur.objects.order_by('-date_inscription')[:8]
+
+    # Dernières annonces
+    derniers_logements = Logement.objects.select_related(
+        'ville', 'quartier', 'bailleur'
+    ).prefetch_related('photos').order_by('-cree_le')[:8]
+
+    # Annonces en attente de validation
+    annonces_attente = Logement.objects.filter(
+        statut='EN_ATTENTE'
+    ).select_related('ville', 'bailleur').prefetch_related('photos').order_by('-cree_le')[:5]
+
+    # Signalements non traités
+    signalements = Signalement.objects.filter(
+        traite=False
+    ).select_related('logement', 'auteur').order_by('-cree_le')[:5]
+
+    context = {
+        'nb_utilisateurs':  nb_utilisateurs,
+        'nb_bailleurs':     nb_bailleurs,
+        'nb_locataires':    nb_locataires,
+        'nb_logements':     nb_logements,
+        'nb_en_attente':    nb_en_attente,
+        'nb_signalements':  nb_signalements,
+        'nb_reservations':  nb_reservations,
+        'nb_conversations': nb_conversations,
+        'derniers_users':   derniers_users,
+        'derniers_logements': derniers_logements,
+        'annonces_attente': annonces_attente,
+        'signalements':     signalements,
+    }
+    return render(request, 'accounts/dashboard_admin.html', context)
 @login_required
 def mes_favoris(request):
     from logements.models import Favori
@@ -322,3 +405,207 @@ def comparer_logements(request):
     return render(request, 'accounts/comparer.html', {
         'logements': logements,
     })
+    
+
+@login_required
+def gerer_reservations(request):
+    """Gestion des réservations par le bailleur."""
+    if not request.user.est_bailleur:
+        return redirect('accounts:tableau_de_bord')
+
+    from logements.models import Reservation
+    statut = request.GET.get('statut', '')
+
+    reservations = Reservation.objects.filter(
+        logement__bailleur=request.user
+    ).select_related('logement', 'locataire').order_by('-cree_le')
+
+    if statut:
+        reservations = reservations.filter(statut=statut)
+
+    return render(request, 'accounts/gerer_reservations.html', {
+        'reservations': reservations,
+        'statut_actuel': statut,
+    })
+
+
+@login_required
+def repondre_reservation(request, reservation_id):
+    """Confirmer ou refuser une réservation."""
+    if not request.user.est_bailleur:
+        return redirect('accounts:tableau_de_bord')
+
+    from logements.models import Reservation
+    from django.http import JsonResponse
+
+    res    = get_object_or_404(Reservation, pk=reservation_id,
+                                logement__bailleur=request.user)
+    action = request.POST.get('action')
+
+    if action == 'confirmer':
+        res.statut = 'CONFIRME'
+        res.save()
+        messages.success(request, f"✅ Réservation de {res.locataire.get_full_name()} confirmée.")
+    elif action == 'refuser':
+        res.statut = 'REFUSE'
+        res.save()
+        messages.warning(request, f"Réservation de {res.locataire.get_full_name()} refusée.")
+
+    return redirect('accounts:gerer_reservations')
+
+
+@login_required
+def mes_annonces(request):
+    """Liste complète des annonces du bailleur."""
+    if not request.user.est_bailleur:
+        return redirect('accounts:tableau_de_bord')
+
+    from logements.models import Logement
+    statut = request.GET.get('statut', '')
+
+    logements = Logement.objects.filter(
+        bailleur=request.user
+    ).select_related('ville', 'quartier').prefetch_related('photos')
+
+    if statut:
+        logements = logements.filter(statut=statut)
+
+    logements = logements.order_by('-cree_le')
+
+    return render(request, 'accounts/mes_annonces.html', {
+        'logements':     logements,
+        'statut_actuel': statut,
+        'nb_total':      logements.count(),
+    })
+    
+    
+@login_required
+def admin_utilisateurs(request):
+    """Gestion des utilisateurs."""
+    if not request.user.est_admin:
+        return redirect('accounts:tableau_de_bord')
+
+    role   = request.GET.get('role', '')
+    search = request.GET.get('q', '')
+
+    users = Utilisateur.objects.order_by('-date_inscription')
+
+    if role:
+        users = users.filter(role=role)
+    if search:
+        from django.db.models import Q
+        users = users.filter(
+            Q(nom__icontains=search) |
+            Q(prenom__icontains=search) |
+            Q(email__icontains=search)
+        )
+
+    from django.core.paginator import Paginator
+    paginator = Paginator(users, 15)
+    page      = request.GET.get('page', 1)
+    users     = paginator.get_page(page)
+
+    return render(request, 'accounts/admin_utilisateurs.html', {
+        'users':      users,
+        'role_actuel': role,
+        'search':     search,
+    })
+
+
+@login_required
+def admin_toggle_user(request, user_id):
+    """Activer / désactiver un utilisateur."""
+    if not request.user.est_admin:
+        from django.http import JsonResponse
+        return JsonResponse({'error': 'Accès refusé'}, status=403)
+
+    user = get_object_or_404(Utilisateur, pk=user_id)
+    if user == request.user:
+        messages.error(request, "Vous ne pouvez pas modifier votre propre compte.")
+        return redirect('accounts:admin_utilisateurs')
+
+    user.is_active = not user.is_active
+    user.save()
+
+    if user.is_active:
+        messages.success(request, f"Compte de {user.get_full_name()} activé.")
+    else:
+        messages.warning(request, f"Compte de {user.get_full_name()} désactivé.")
+
+    return redirect('accounts:admin_utilisateurs')
+
+
+@login_required
+def admin_logements(request):
+    """Gestion des logements."""
+    if not request.user.est_admin:
+        return redirect('accounts:tableau_de_bord')
+
+    from logements.models import Logement
+    statut = request.GET.get('statut', '')
+    search = request.GET.get('q', '')
+
+    logements = Logement.objects.select_related(
+        'ville', 'quartier', 'bailleur'
+    ).prefetch_related('photos').order_by('-cree_le')
+
+    if statut:
+        logements = logements.filter(statut=statut)
+    if search:
+        from django.db.models import Q
+        logements = logements.filter(
+            Q(titre__icontains=search) |
+            Q(bailleur__email__icontains=search) |
+            Q(ville__nom__icontains=search)
+        )
+
+    from django.core.paginator import Paginator
+    paginator = Paginator(logements, 15)
+    page      = request.GET.get('page', 1)
+    logements = paginator.get_page(page)
+
+    return render(request, 'accounts/admin_logements.html', {
+        'logements':     logements,
+        'statut_actuel': statut,
+        'search':        search,
+    })
+
+
+@login_required
+def admin_signalements(request):
+    """Gestion des signalements."""
+    if not request.user.est_admin:
+        return redirect('accounts:tableau_de_bord')
+
+    from logements.models import Signalement
+    signalements = Signalement.objects.filter(
+        traite=False
+    ).select_related('logement', 'auteur').order_by('-cree_le')
+
+    return render(request, 'accounts/admin_signalements.html', {
+        'signalements': signalements,
+    })
+
+
+@login_required
+def admin_traiter_signalement(request, signal_id):
+    """Traiter un signalement."""
+    if not request.user.est_admin:
+        return redirect('accounts:tableau_de_bord')
+
+    from logements.models import Signalement
+    signal = get_object_or_404(Signalement, pk=signal_id)
+    action = request.POST.get('action')
+
+    if action == 'traiter':
+        signal.traite = True
+        signal.save()
+        messages.success(request, "Signalement marqué comme traité.")
+    elif action == 'suspendre':
+        signal.logement.statut = 'SUSPENDU'
+        signal.logement.save()
+        signal.traite = True
+        signal.save()
+        messages.warning(request, f"Logement suspendu et signalement traité.")
+
+    return redirect('accounts:admin_signalements')

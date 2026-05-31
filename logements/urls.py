@@ -21,4 +21,5 @@ urlpatterns = [
 
     # API carte
     path('api/logements-carte/',                views.api_logements_carte, name='api_carte'),
+    path('carte/', views.carte, name='carte'),
 ]
