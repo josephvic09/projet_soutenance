@@ -102,14 +102,80 @@
           </a>
         </li>
 
-        <!-- Notifications -->
-        <li class="nav-item">
-          <a class="nav-link position-relative" href="{% url 'notifs:liste' %}">
-            <svg data-lucide="bell"
-                 style="width:20px;height:20px;vertical-align:-4px">
-            </svg>
-          </a>
-        </li>
+       <!-- Notifications -->
+<li class="nav-item dropdown">
+  <a class="nav-link position-relative"
+     href="#"
+     data-bs-toggle="dropdown"
+     id="notifDropdown"
+     onclick="chargerNotifications()">
+    <svg data-lucide="bell"
+         style="width:20px;height:20px;vertical-align:-4px">
+    </svg>
+    <span id="notifBadge"
+          style="position:absolute;top:-2px;right:-4px;
+                 background:#ef4444;color:white;
+                 width:18px;height:18px;border-radius:50%;
+                 font-size:.65rem;font-weight:800;
+                 display:none;align-items:center;
+                 justify-content:center;line-height:1">
+      0
+    </span>
+  </a>
+
+  <!-- Dropdown notifications -->
+  <div class="dropdown-menu dropdown-menu-end p-0 shadow border-0 rounded-4"
+       style="width:360px;max-height:500px;overflow:hidden">
+
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center
+                p-3 border-bottom">
+      <h6 class="fw-bold mb-0 d-flex align-items-center gap-2">
+        <svg data-lucide="bell"
+             style="width:16px;height:16px;color:var(--primary)">
+        </svg>
+        Notifications
+        <span id="notifCountBadge"
+              style="background:var(--primary-light);color:var(--primary);
+                     font-size:.7rem;font-weight:700;
+                     padding:1px 8px;border-radius:50px;display:none">
+          0
+        </span>
+      </h6>
+      <button onclick="toutMarquerLu()"
+              class="btn btn-link btn-sm p-0 text-muted"
+              style="font-size:.75rem;text-decoration:none">
+        Tout lire
+      </button>
+    </div>
+
+    <!-- Liste -->
+    <div id="notifList"
+         style="max-height:380px;overflow-y:auto">
+      <div class="text-center py-4 text-muted small"
+           id="notifLoading">
+        <div style="width:20px;height:20px;border:2px solid var(--primary);
+                    border-top-color:transparent;border-radius:50%;
+                    animation:spin .6s linear infinite;
+                    margin:0 auto .5rem">
+        </div>
+        Chargement...
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="border-top p-2 text-center">
+      <a href="{% url 'notifs:liste' %}"
+         class="text-primary small fw-semibold text-decoration-none">
+        Voir toutes les notifications
+        <svg data-lucide="arrow-right"
+             style="width:13px;height:13px;margin-left:3px">
+        </svg>
+      </a>
+    </div>
+
+  </div>
+</li>
 
         <!-- Menu profil -->
         <li class="nav-item dropdown">

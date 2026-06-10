@@ -121,6 +121,23 @@
       </a>
     </div>
     <div class="col-md-3 col-6">
+  <a href="{% url 'paiements:abonnements' %}"
+     class="d-block text-decoration-none">
+    <div class="card p-3 text-center h-100"
+         style="border:1.5px solid var(--border);transition:.2s;cursor:pointer"
+         onmouseover="this.style.borderColor='#8b5cf6';this.style.background='#f5f3ff'"
+         onmouseout="this.style.borderColor='var(--border)';this.style.background='white'">
+      <svg data-lucide="star"
+           style="width:28px;height:28px;color:#8b5cf6;margin:0 auto .75rem">
+      </svg>
+      <div class="fw-semibold small">Premium</div>
+      <div class="text-muted" style="font-size:.75rem">
+        {% if user.premium_actif %}Actif{% else %}Upgrade{% endif %}
+      </div>
+    </div>
+  </a>
+</div>
+    <div class="col-md-3 col-6">
       <a href="{% url 'accounts:mes_annonces' %}"
          class="d-block text-decoration-none">
         <div class="card p-3 text-center h-100"

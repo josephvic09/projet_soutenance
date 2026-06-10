@@ -121,9 +121,26 @@
         </div>
       </a>
     </div>
+    <div class="col-md-3 col-6">
+  <a href="{% url 'paiements:historique' %}"
+     class="d-block text-decoration-none">
+    <div class="card p-3 text-center h-100"
+         style="border:1.5px solid var(--border);transition:.2s;cursor:pointer"
+         onmouseover="this.style.borderColor='var(--primary)';this.style.background='var(--primary-light)'"
+         onmouseout="this.style.borderColor='var(--border)';this.style.background='white'">
+      <svg data-lucide="credit-card"
+           style="width:28px;height:28px;color:var(--primary);margin:0 auto .75rem">
+      </svg>
+      <div class="fw-semibold small">Paiements</div>
+      <div class="text-muted" style="font-size:.75rem">Historique</div>
+    </div>
+  </a>
+</div>
   </div>
 
   <div class="row g-4">
+
+  
 
     <!-- ─── Favoris récents ────────────────────────── -->
     <div class="col-lg-8">

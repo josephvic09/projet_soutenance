@@ -154,3 +154,161 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ─── Export global ────────────────────────────────────
 window.LCM = { showToast, getCsrf };
+
+// ─── Système de notifications ─────────────────────────
+
+async function chargerNotifications() {
+  try {
+    const res  = await fetch('/notifications/dernieres/');
+    const data = await res.json();
+
+    const list  = document.getElementById('notifList');
+    const badge = document.getElementById('notifBadge');
+    const count = document.getElementById('notifCountBadge');
+
+    if (!list) return;
+
+    // Mettre à jour le badge
+    if (data.nb_non_lues > 0) {
+      badge.textContent    = data.nb_non_lues > 9 ? '9+' : data.nb_non_lues;
+      badge.style.display  = 'flex';
+      count.textContent    = data.nb_non_lues;
+      count.style.display  = '';
+    } else {
+      badge.style.display  = 'none';
+      count.style.display  = 'none';
+    }
+
+    // Afficher les notifications
+    if (data.notifications.length === 0) {
+      list.innerHTML = `
+        <div class="text-center py-4 text-muted small">
+          <svg data-lucide="bell-off"
+               style="width:28px;height:28px;color:var(--gray-200);
+                      display:block;margin:0 auto .75rem">
+          </svg>
+          Aucune notification
+        </div>`;
+    } else {
+      list.innerHTML = data.notifications.map(n => `
+        <a href="${n.lien || '#'}"
+           onclick="marquerLue(${n.id})"
+           class="d-flex gap-3 p-3 text-decoration-none text-dark border-bottom"
+           style="background:${n.lue ? 'white' : 'var(--primary-light)'};
+                  transition:.15s"
+           onmouseover="this.style.background='var(--gray-50)'"
+           onmouseout="this.style.background='${n.lue ? 'white' : 'var(--primary-light)'}'">
+          <div style="width:36px;height:36px;border-radius:10px;
+                      background:${n.couleur}20;
+                      display:flex;align-items:center;
+                      justify-content:center;flex-shrink:0">
+            <svg data-lucide="${n.icone}"
+                 style="width:17px;height:17px;color:${n.couleur}">
+            </svg>
+          </div>
+          <div class="flex-grow-1 overflow-hidden">
+            <div style="font-weight:${n.lue ? '500' : '700'};
+                        font-size:.82rem;white-space:nowrap;
+                        overflow:hidden;text-overflow:ellipsis">
+              ${n.titre}
+            </div>
+            <div style="font-size:.73rem;color:var(--text-muted);
+                        overflow:hidden;text-overflow:ellipsis;
+                        white-space:nowrap;margin-top:1px">
+              ${n.message}
+            </div>
+            <div style="font-size:.68rem;color:var(--text-muted);margin-top:2px">
+              ${n.temps}
+            </div>
+          </div>
+          ${!n.lue ? `<div style="width:7px;height:7px;border-radius:50%;
+                                   background:var(--primary);flex-shrink:0;
+                                   margin-top:6px"></div>` : ''}
+        </a>`).join('');
+    }
+
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+
+  } catch(e) {
+    console.error('Erreur notifications:', e);
+  }
+}
+
+async function marquerLue(notifId) {
+  try {
+    await fetch(`/notifications/${notifId}/lue/`, {
+      method:  'POST',
+      headers: { 'X-CSRFToken': getCsrf() },
+    });
+    // Mettre à jour visuellement
+    const el = document.getElementById(`notif-${notifId}`);
+    if (el) {
+      el.style.background  = 'white';
+      el.style.borderColor = 'var(--border)';
+      const point = el.querySelector('[style*="border-radius:50%"]');
+      if (point) point.remove();
+    }
+    updateNotifCount();
+  } catch(e) {}
+}
+
+async function toutMarquerLu() {
+  try {
+    await fetch('/notifications/marquer-lues/', {
+      method:  'POST',
+      headers: { 'X-CSRFToken': getCsrf() },
+    });
+    chargerNotifications();
+    LCM.showToast('Toutes les notifications sont lues', 'success');
+  } catch(e) {}
+}
+
+async function supprimerNotif(notifId) {
+  try {
+    await fetch(`/notifications/${notifId}/supprimer/`, {
+      method:  'POST',
+      headers: { 'X-CSRFToken': getCsrf() },
+    });
+    const el = document.getElementById(`notif-${notifId}`);
+    if (el) {
+      el.style.transition = 'opacity .3s, transform .3s';
+      el.style.opacity    = '0';
+      el.style.transform  = 'translateX(20px)';
+      setTimeout(() => el.remove(), 300);
+    }
+    updateNotifCount();
+  } catch(e) {}
+}
+
+// ─── Mise à jour count en temps réel ──────────────────
+
+async function updateNotifCount() {
+  try {
+    const res  = await fetch('/notifications/count/');
+    const data = await res.json();
+    const badge = document.getElementById('notifBadge');
+    const count = document.getElementById('notifCountBadge');
+    if (badge) {
+      if (data.count > 0) {
+        badge.textContent   = data.count > 9 ? '9+' : data.count;
+        badge.style.display = 'flex';
+        if (count) {
+          count.textContent   = data.count;
+          count.style.display = '';
+        }
+      } else {
+        badge.style.display = 'none';
+        if (count) count.style.display = 'none';
+      }
+    }
+  } catch(e) {}
+}
+
+// Charger au démarrage et toutes les 30s
+document.addEventListener('DOMContentLoaded', () => {
+  const isAuth = document.body.dataset.authenticated === 'true';
+  if (isAuth) {
+    updateNotifCount();
+    setInterval(updateNotifCount, 30000);
+  }
+});

@@ -1,146 +1,194 @@
+import json
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse
+from django.views.decorators.http import require_POST
 from django.db.models import Q, Count
 from django.core.paginator import Paginator
-from django.views.decorators.http import require_POST
-from django.utils import timezone
 
-from .models import Logement, PhotoLogement, Favori, Avis, Ville, Quartier, Reservation, Signalement
-from .forms import LogementForm, AvisForm, RechercheForm, ReservationForm
+from .models import (
+    Logement, Ville, Quartier, Favori,
+    Reservation, Avis, Signalement, PhotoLogement
+)
+from .forms import LogementForm, RechercheForm, AvisForm, ReservationForm
+from accounts.models import Utilisateur
 
 
-# ─── Accueil ─────────────────────────────────────────────
+# ─── Accueil ─────────────────────────────────────────
 
 def accueil(request):
     logements_vedette = Logement.objects.filter(
         statut='PUBLIE', disponible=True, est_vedette=True
-    ).select_related('ville', 'quartier').prefetch_related('photos')[:6]
+    ).select_related(
+        'ville', 'quartier'
+    ).prefetch_related('photos').order_by('-est_booste', '-cree_le')[:6]
 
     logements_recents = Logement.objects.filter(
         statut='PUBLIE', disponible=True
-    ).select_related('ville', 'quartier').prefetch_related('photos').order_by('-cree_le')[:12]
+    ).select_related(
+        'ville', 'quartier'
+    ).prefetch_related('photos').order_by('-cree_le')[:12]
 
     villes_populaires = Ville.objects.filter(actif=True).annotate(
-        nb=Count('logements', filter=Q(logements__statut='PUBLIE'))
-    ).order_by('-nb')[:8]
+        nb=Count(
+            'logements',
+            filter=Q(logements__statut='PUBLIE')
+        )
+    ).filter(nb__gt=0).order_by('-nb')[:8]
+
+    nb_logements = Logement.objects.filter(statut='PUBLIE').count()
+    nb_villes    = Ville.objects.filter(actif=True).count()
+    nb_bailleurs = Utilisateur.objects.filter(role='BAILLEUR').count()
+
+    avantages = [
+        {
+            'emoji':       '🔍',
+            'titre':       'Recherche Intelligente',
+            'description': 'Moteur IA qui comprend vos besoins en français naturel. Trouvez en secondes.',
+        },
+        {
+            'emoji':       '📍',
+            'titre':       'Carte Interactive',
+            'description': 'Visualisez tous les logements sur une carte Leaflet en temps réel.',
+        },
+        {
+            'emoji':       '🛡️',
+            'titre':       'Annonces Vérifiées',
+            'description': 'Chaque bailleur est contrôlé par notre équipe. Zéro arnaque garantie.',
+        },
+        {
+            'emoji':       '💬',
+            'titre':       'Chat Instantané',
+            'description': 'Contactez le bailleur directement depuis la plateforme.',
+        },
+        {
+            'emoji':       '📱',
+            'titre':       '100% Mobile',
+            'description': 'Interface optimisée pour smartphone, tablette et desktop.',
+        },
+        {
+            'emoji':       '💳',
+            'titre':       'Mobile Money',
+            'description': 'MTN MoMo et Orange Money intégrés pour payer en toute sécurité.',
+        },
+    ]
 
     context = {
         'logements_vedette': logements_vedette,
         'logements_recents': logements_recents,
         'villes_populaires': villes_populaires,
         'form_recherche':    RechercheForm(),
+        'avantages':         avantages,
         'stats': {
-            'nb_logements': Logement.objects.filter(statut='PUBLIE').count(),
-            'nb_villes':    Ville.objects.filter(actif=True).count(),
+            'nb_logements': nb_logements,
+            'nb_villes':    nb_villes,
+            'nb_bailleurs': nb_bailleurs,
         }
     }
     return render(request, 'logements/accueil.html', context)
 
 
-# ─── Recherche ───────────────────────────────────────────
+# ─── Recherche ────────────────────────────────────────
 
 def recherche(request):
     form = RechercheForm(request.GET)
-    qs = Logement.objects.filter(
+    qs   = Logement.objects.filter(
         statut='PUBLIE', disponible=True
     ).select_related('ville', 'quartier').prefetch_related('photos')
 
     if form.is_valid():
-        data = form.cleaned_data
+        q             = form.cleaned_data.get('q')
+        ville         = form.cleaned_data.get('ville')
+        quartier      = form.cleaned_data.get('quartier')
+        type_logement = form.cleaned_data.get('type_logement')
+        type_offre    = form.cleaned_data.get('type_offre')
+        prix_min      = form.cleaned_data.get('prix_min')
+        prix_max      = form.cleaned_data.get('prix_max')
+        nb_chambres   = form.cleaned_data.get('nb_chambres')
+        standing      = form.cleaned_data.get('standing')
+        wifi          = form.cleaned_data.get('wifi')
+        parking       = form.cleaned_data.get('parking')
+        climatisation = form.cleaned_data.get('climatisation')
+        gardien       = form.cleaned_data.get('gardien')
+        piscine       = form.cleaned_data.get('piscine')
 
-        if data.get('q'):
-            terme = data['q']
+        if q:
             qs = qs.filter(
-                Q(titre__icontains=terme) |
-                Q(description__icontains=terme) |
-                Q(ville__nom__icontains=terme) |
-                Q(quartier__nom__icontains=terme) |
-                Q(adresse__icontains=terme)
+                Q(titre__icontains=q) |
+                Q(description__icontains=q) |
+                Q(adresse__icontains=q) |
+                Q(ville__nom__icontains=q) |
+                Q(quartier__nom__icontains=q)
             )
-        if data.get('ville'):
-            qs = qs.filter(ville__nom__icontains=data['ville'])
-        if data.get('quartier'):
-            qs = qs.filter(quartier__nom__icontains=data['quartier'])
-        if data.get('type_logement'):
-            qs = qs.filter(type_logement=data['type_logement'])
-        if data.get('type_offre'):
-            qs = qs.filter(type_offre=data['type_offre'])
-        if data.get('prix_min'):
-            qs = qs.filter(prix__gte=data['prix_min'])
-        if data.get('prix_max'):
-            qs = qs.filter(prix__lte=data['prix_max'])
-        if data.get('nb_chambres'):
-            qs = qs.filter(nb_chambres__gte=data['nb_chambres'])
-        if data.get('standing'):
-            qs = qs.filter(standing=data['standing'])
-        if data.get('wifi'):
+        if ville:
+            qs = qs.filter(ville__nom__icontains=ville)
+        if quartier:
+            qs = qs.filter(quartier__nom__icontains=quartier)
+        if type_logement:
+            qs = qs.filter(type_logement=type_logement)
+        if type_offre:
+            qs = qs.filter(type_offre=type_offre)
+        if prix_min:
+            qs = qs.filter(prix__gte=prix_min)
+        if prix_max:
+            qs = qs.filter(prix__lte=prix_max)
+        if nb_chambres:
+            qs = qs.filter(nb_chambres__gte=nb_chambres)
+        if standing:
+            qs = qs.filter(standing=standing)
+        if wifi:
             qs = qs.filter(internet=True)
-        if data.get('parking'):
+        if parking:
             qs = qs.filter(parking=True)
-        if data.get('climatisation'):
+        if climatisation:
             qs = qs.filter(climatisation=True)
-        if data.get('gardien'):
+        if gardien:
             qs = qs.filter(gardien=True)
-        if data.get('piscine'):
+        if piscine:
             qs = qs.filter(piscine=True)
-        if data.get('generateur'):
-            qs = qs.filter(generateur=True)
 
     # Tri
     tri = request.GET.get('tri', 'recent')
-    TRI_MAP = {
-        'recent':    '-cree_le',
-        'prix_asc':  'prix',
-        'prix_desc': '-prix',
-        'populaire': '-nb_vues',
-    }
-    qs = qs.order_by(TRI_MAP.get(tri, '-cree_le'))
+    if tri == 'prix_asc':
+        qs = qs.order_by('prix')
+    elif tri == 'prix_desc':
+        qs = qs.order_by('-prix')
+    elif tri == 'vues':
+        qs = qs.order_by('-nb_vues')
+    else:
+        qs = qs.order_by('-est_booste', '-cree_le')
 
-    # Pagination
-    paginator = Paginator(qs, 12)
-    page      = request.GET.get('page', 1)
-    logements = paginator.get_page(page)
+    nb_resultats = qs.count()
+    paginator    = Paginator(qs, 12)
+    page         = request.GET.get('page', 1)
+    logements    = paginator.get_page(page)
 
-    # Logements pour la carte
-    logements_carte = list(
-        qs.filter(
-            latitude__isnull=False,
-            longitude__isnull=False
-        ).values(
-            'id', 'titre', 'prix', 'latitude',
-            'longitude', 'type_logement', 'nb_chambres'
-        )[:100]
-    )
-
-    context = {
-        'form':            form,
-        'logements':       logements,
-        'nb_resultats':    qs.count(),
-        'logements_carte': logements_carte,
-        'tri_actuel':      tri,
-        'villes':          Ville.objects.filter(actif=True),
-    }
-    return render(request, 'logements/recherche.html', context)
+    return render(request, 'logements/recherche.html', {
+        'form':         form,
+        'logements':    logements,
+        'nb_resultats': nb_resultats,
+        'villes':       Ville.objects.filter(actif=True),
+        'tri':          tri,
+    })
 
 
-# ─── Détail logement ─────────────────────────────────────
+# ─── Détail logement ─────────────────────────────────
 
 def detail_logement(request, slug):
     logement = get_object_or_404(
-        Logement.objects.select_related(
-            'ville', 'quartier', 'bailleur'
-        ).prefetch_related('photos', 'avis'),
-        slug=slug,
-        statut='PUBLIE'
+        Logement, slug=slug, statut='PUBLIE'
     )
 
-    # Incrémenter vues (une fois par session)
-    vue_key = f'vue_{logement.pk}'
-    if not request.session.get(vue_key):
-        logement.incrementer_vues()
-        request.session[vue_key] = True
+    # Incrémenter les vues
+    Logement.objects.filter(pk=logement.pk).update(
+        nb_vues=logement.nb_vues + 1
+    )
+
+    photos       = logement.photos.order_by('ordre', '-principale')
+    avis         = logement.avis.filter(actif=True).select_related('auteur')
+    form_avis    = AvisForm()
+    form_reserv  = ReservationForm()
 
     # Logements similaires
     similaires = Logement.objects.filter(
@@ -150,7 +198,7 @@ def detail_logement(request, slug):
         type_logement=logement.type_logement,
     ).exclude(pk=logement.pk).prefetch_related('photos')[:4]
 
-    # Est en favori ?
+    # Vérifier si favori
     est_favori = False
     if request.user.is_authenticated:
         est_favori = Favori.objects.filter(
@@ -158,39 +206,18 @@ def detail_logement(request, slug):
             logement=logement
         ).exists()
 
-    # Formulaire avis
-    avis_form = AvisForm()
-    if request.method == 'POST' and 'avis' in request.POST:
-        if request.user.is_authenticated:
-            avis_form = AvisForm(request.POST)
-            if avis_form.is_valid():
-                avis, cree = Avis.objects.get_or_create(
-                    logement=logement,
-                    auteur=request.user,
-                    defaults={
-                        'note':        avis_form.cleaned_data['note'],
-                        'commentaire': avis_form.cleaned_data['commentaire'],
-                    }
-                )
-                if cree:
-                    messages.success(request, "✅ Avis soumis ! Visible après validation.")
-                else:
-                    messages.warning(request, "Vous avez déjà donné un avis.")
-                return redirect('logements:detail', slug=slug)
-
-    context = {
-        'logement':         logement,
-        'similaires':       similaires,
-        'est_favori':       est_favori,
-        'avis_form':        avis_form,
-        'avis_list':        logement.avis.filter(approuve=True).select_related('auteur')[:10],
-        'note_moy':         logement.note_moyenne,
-        'form_reservation': ReservationForm(),
-    }
-    return render(request, 'logements/detail.html', context)
+    return render(request, 'logements/detail.html', {
+        'logement':   logement,
+        'photos':     photos,
+        'avis':       avis,
+        'form_avis':  form_avis,
+        'form_reserv':form_reserv,
+        'similaires': similaires,
+        'est_favori': est_favori,
+    })
 
 
-# ─── Créer logement ──────────────────────────────────────
+# ─── Créer logement ───────────────────────────────────
 
 @login_required
 def creer_logement(request):
@@ -208,7 +235,14 @@ def creer_logement(request):
             logement.statut   = 'EN_ATTENTE'
             logement.save()
 
+            # Sauvegarder les photos
             for i, photo in enumerate(photos[:10]):
+                if photo.size > 5 * 1024 * 1024:
+                    continue
+                if photo.content_type not in [
+                    'image/jpeg', 'image/png', 'image/webp'
+                ]:
+                    continue
                 PhotoLogement.objects.create(
                     logement=logement,
                     image=photo,
@@ -216,38 +250,78 @@ def creer_logement(request):
                     ordre=i,
                 )
 
+            # Notification admins
+            try:
+                from notifs.utils import notifier
+                admins = Utilisateur.objects.filter(
+                    role__in=['ADMIN', 'SUPER_ADMIN']
+                )
+                for admin in admins:
+                    notifier(
+                        destinataire=admin,
+                        type_notif='SYSTEME',
+                        titre='Nouvelle annonce à valider',
+                        message=(
+                            f'{request.user.get_full_name()} a soumis '
+                            f'"{logement.titre}"'
+                        ),
+                        lien='/accounts/admin/logements/?statut=EN_ATTENTE',
+                    )
+            except Exception:
+                pass
+
             messages.success(
                 request,
-                "✅ Annonce soumise ! Elle sera publiée après validation."
+                "✅ Annonce soumise avec succès ! "
+                "Elle sera publiée après validation sous 24h."
             )
             return redirect('accounts:dashboard_bailleur')
+        else:
+            messages.error(
+                request,
+                "Veuillez corriger les erreurs dans le formulaire."
+            )
     else:
         form = LogementForm()
 
+    villes = Ville.objects.filter(actif=True).order_by('nom')
     return render(request, 'logements/creer.html', {
         'form':   form,
-        'villes': Ville.objects.filter(actif=True),
+        'villes': villes,
     })
 
 
-# ─── Modifier logement ───────────────────────────────────
+# ─── Modifier logement ────────────────────────────────
 
 @login_required
 def modifier_logement(request, slug):
-    logement = get_object_or_404(Logement, slug=slug, bailleur=request.user)
+    logement = get_object_or_404(
+        Logement, slug=slug, bailleur=request.user
+    )
 
     if request.method == 'POST':
-        form = LogementForm(request.POST, instance=logement)
+        form   = LogementForm(request.POST, instance=logement)
+        photos = request.FILES.getlist('photos')
+
         if form.is_valid():
-            form.save()
-            for i, photo in enumerate(request.FILES.getlist('photos')):
+            logement = form.save()
+
+            # Ajouter nouvelles photos
+            nb_photos = logement.photos.count()
+            for i, photo in enumerate(photos[:10 - nb_photos]):
+                if photo.size > 5 * 1024 * 1024:
+                    continue
                 PhotoLogement.objects.create(
                     logement=logement,
                     image=photo,
-                    ordre=100 + i
+                    principale=False,
+                    ordre=nb_photos + i,
                 )
-            messages.success(request, "✅ Annonce mise à jour !")
+
+            messages.success(request, "✅ Annonce mise à jour avec succès.")
             return redirect('logements:detail', slug=logement.slug)
+        else:
+            messages.error(request, "Veuillez corriger les erreurs.")
     else:
         form = LogementForm(instance=logement)
 
@@ -257,118 +331,158 @@ def modifier_logement(request, slug):
     })
 
 
-# ─── Supprimer logement ──────────────────────────────────
+# ─── Supprimer logement ───────────────────────────────
 
 @login_required
+@require_POST
 def supprimer_logement(request, slug):
-    logement = get_object_or_404(Logement, slug=slug, bailleur=request.user)
-    if request.method == 'POST':
-        logement.statut = 'ARCHIVE'
-        logement.save()
-        messages.success(request, "Annonce archivée.")
-    return redirect('accounts:dashboard_bailleur')
+    logement = get_object_or_404(
+        Logement, slug=slug, bailleur=request.user
+    )
+    logement.statut = 'ARCHIVE'
+    logement.save()
+    messages.success(request, f'Annonce "{logement.titre}" archivée.')
+    return redirect('accounts:mes_annonces')
 
 
-# ─── Toggle favori (AJAX) ────────────────────────────────
+# ─── Toggle Favori ────────────────────────────────────
 
 @login_required
 @require_POST
 def toggle_favori(request, logement_id):
-    logement = get_object_or_404(Logement, pk=logement_id, statut='PUBLIE')
-    favori, cree = Favori.objects.get_or_create(
+    logement = get_object_or_404(Logement, pk=logement_id)
+    fav, cree = Favori.objects.get_or_create(
         utilisateur=request.user,
         logement=logement
     )
     if not cree:
-        favori.delete()
-        Logement.objects.filter(pk=logement_id).update(
-            nb_favoris=max(0, logement.nb_favoris - 1)
-        )
+        fav.delete()
         return JsonResponse({'status': 'removed'})
 
-    Logement.objects.filter(pk=logement_id).update(
-        nb_favoris=logement.nb_favoris + 1
-    )
+    try:
+        from notifs.utils import notif_nouveau_favori
+        notif_nouveau_favori(logement, request.user)
+    except Exception:
+        pass
+
     return JsonResponse({'status': 'added'})
 
 
-# ─── Réservation ─────────────────────────────────────────
+# ─── Faire une réservation ────────────────────────────
 
 @login_required
-@require_POST
 def faire_reservation(request, logement_id):
     logement = get_object_or_404(
-        Logement, pk=logement_id, statut='PUBLIE', disponible=True
+        Logement, pk=logement_id, statut='PUBLIE'
     )
-    form = ReservationForm(request.POST)
-    if form.is_valid():
-        res          = form.save(commit=False)
-        res.logement = logement
-        res.locataire = request.user
-        res.save()
-        messages.success(request, "✅ Demande envoyée ! Le bailleur vous contactera.")
+
+    if request.user == logement.bailleur:
+        messages.error(
+            request,
+            "Vous ne pouvez pas réserver votre propre logement."
+        )
+        return redirect('logements:detail', slug=logement.slug)
+
+    if request.method == 'POST':
+        form = ReservationForm(request.POST)
+        if form.is_valid():
+            res           = form.save(commit=False)
+            res.locataire = request.user
+            res.logement  = logement
+            res.save()
+
+            try:
+                from notifs.utils import notif_nouvelle_reservation
+                notif_nouvelle_reservation(res)
+            except Exception:
+                pass
+
+            messages.success(
+                request,
+                "✅ Demande envoyée ! Le bailleur vous répondra sous 24h."
+            )
+            return redirect('accounts:mes_reservations')
     else:
-        messages.error(request, "Erreur dans le formulaire.")
-    return redirect('logements:detail', slug=logement.slug)
+        form = ReservationForm()
+
+    return render(request, 'logements/reserver.html', {
+        'form':     form,
+        'logement': logement,
+    })
 
 
-# ─── Signalement (AJAX) ──────────────────────────────────
+# ─── Signaler un logement ─────────────────────────────
 
 @login_required
-@require_POST
 def signaler_logement(request, logement_id):
-    logement    = get_object_or_404(Logement, pk=logement_id)
-    motif       = request.POST.get('motif', 'AUTRE')
-    description = request.POST.get('description', '')
-    Signalement.objects.create(
-        logement=logement,
-        auteur=request.user,
-        motif=motif,
-        description=description,
-    )
-    return JsonResponse({'status': 'ok'})
+    logement = get_object_or_404(Logement, pk=logement_id)
+
+    if request.method == 'POST':
+        motif       = request.POST.get('motif', 'AUTRE')
+        description = request.POST.get('description', '')
+
+        Signalement.objects.create(
+            logement=logement,
+            auteur=request.user,
+            motif=motif,
+            description=description,
+        )
+        messages.success(
+            request,
+            "Signalement envoyé. Notre équipe va examiner cette annonce."
+        )
+        return redirect('logements:detail', slug=logement.slug)
+
+    return render(request, 'logements/signaler.html', {
+        'logement': logement
+    })
 
 
-# ─── API Carte ───────────────────────────────────────────
+# ─── Admin — Valider logement ─────────────────────────
 
-def api_logements_carte(request):
-    qs = Logement.objects.filter(
-        statut='PUBLIE',
-        disponible=True,
-        latitude__isnull=False,
-        longitude__isnull=False,
-    ).select_related('ville').prefetch_related('photos')[:200]
+@login_required
+def admin_valider_logement(request, logement_id):
+    if not request.user.est_admin:
+        messages.error(request, "Accès refusé.")
+        return redirect('logements:accueil')
 
-    data = []
-    for l in qs:
-        photo = l.get_photo_principale()
-        data.append({
-            'id':           l.pk,
-            'titre':        l.titre,
-            'prix':         l.prix,
-            'prix_formate': l.prix_formate,
-            'ville':        l.ville.nom,
-            'quartier':     l.quartier.nom if l.quartier else '',
-            'type':         l.get_type_logement_display(),
-            'chambres':     l.nb_chambres,
-            'lat':          float(l.latitude),
-            'lng':          float(l.longitude),
-            'photo':        photo.image.url if photo else '/static/images/no-image.jpg',
-            'url':          f'/logements/{l.slug}/',
-        })
-    return JsonResponse({'logements': data})
+    logement = get_object_or_404(Logement, pk=logement_id)
+    action   = request.POST.get('action')
+
+    if action == 'valider':
+        logement.statut = 'PUBLIE'
+        logement.save()
+        try:
+            from notifs.utils import notif_annonce_validee
+            notif_annonce_validee(logement)
+        except Exception:
+            pass
+        messages.success(
+            request,
+            f'✅ Annonce "{logement.titre}" publiée.'
+        )
+    elif action == 'rejeter':
+        logement.statut = 'SUSPENDU'
+        logement.save()
+        try:
+            from notifs.utils import notif_annonce_rejetee
+            motif = request.POST.get('motif', '')
+            notif_annonce_rejetee(logement, motif)
+        except Exception:
+            pass
+        messages.warning(
+            request,
+            f'Annonce "{logement.titre}" rejetée.'
+        )
+
+    return redirect('accounts:admin_logements')
+
+
+# ─── Carte Leaflet ────────────────────────────────────
 
 def carte(request):
-    """Page carte interactive complète."""
-    from django.db.models import Q
     villes    = Ville.objects.filter(actif=True)
     quartiers = Quartier.objects.select_related('ville').all()
-
-    # Filtres depuis GET
-    ville_id  = request.GET.get('ville')
-    type_offre = request.GET.get('type_offre', '')
-    prix_max  = request.GET.get('prix_max', '')
-    type_log  = request.GET.get('type_logement', '')
 
     qs = Logement.objects.filter(
         statut='PUBLIE',
@@ -376,6 +490,12 @@ def carte(request):
         latitude__isnull=False,
         longitude__isnull=False,
     ).select_related('ville', 'quartier').prefetch_related('photos')
+
+    # Filtres
+    ville_id   = request.GET.get('ville')
+    type_offre = request.GET.get('type_offre', '')
+    prix_max   = request.GET.get('prix_max', '')
+    type_log   = request.GET.get('type_logement', '')
 
     if ville_id:
         qs = qs.filter(ville_id=ville_id)
@@ -400,7 +520,6 @@ def carte(request):
             'offre':        l.get_type_offre_display(),
             'chambres':     l.nb_chambres,
             'surface':      l.surface or '',
-            'meuble':       l.get_meuble_display(),
             'lat':          float(l.latitude),
             'lng':          float(l.longitude),
             'photo':        photo.image.url if photo else '/static/images/no-image.jpg',
@@ -413,7 +532,6 @@ def carte(request):
             'gardien':      l.gardien,
         })
 
-    import json
     context = {
         'logements_json': json.dumps(logements_data),
         'nb_logements':   len(logements_data),
@@ -423,3 +541,40 @@ def carte(request):
         'offre_choices':  Logement.OFFRE_CHOICES,
     }
     return render(request, 'logements/carte.html', context)
+
+
+# ─── API Logements Carte ──────────────────────────────
+
+def api_logements_carte(request):
+    qs = Logement.objects.filter(
+        statut='PUBLIE',
+        disponible=True,
+        latitude__isnull=False,
+        longitude__isnull=False,
+    ).select_related('ville', 'quartier')[:300]
+
+    data = []
+    for l in qs:
+        photo = l.get_photo_principale()
+        data.append({
+            'id':       l.pk,
+            'titre':    l.titre,
+            'prix':     l.prix,
+            'lat':      float(l.latitude),
+            'lng':      float(l.longitude),
+            'photo':    photo.image.url if photo else '',
+            'url':      f'/logements/{l.slug}/',
+        })
+    return JsonResponse({'logements': data})
+
+
+# ─── API Quartiers par ville ──────────────────────────
+
+def api_quartiers_par_ville(request):
+    ville_id = request.GET.get('ville_id')
+    if not ville_id:
+        return JsonResponse({'quartiers': []})
+    quartiers = Quartier.objects.filter(
+        ville_id=ville_id
+    ).order_by('nom').values('id', 'nom')
+    return JsonResponse({'quartiers': list(quartiers)})

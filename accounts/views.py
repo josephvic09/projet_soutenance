@@ -18,6 +18,7 @@ from .forms import (
 )
 
 
+
 # ─── Utilitaires ─────────────────────────────────────────
 
 def get_ip(request):
@@ -55,16 +56,19 @@ def inscription(request):
         form = InscriptionForm(request.POST)
         if form.is_valid():
             user = form.save(commit=False)
-            # ✅ Activation directe sans email
-            user.is_active = True
+            user.is_active     = True
             user.email_verified = True
             user.save()
+
+            # Notification de bienvenue
+            from notifs.utils import notif_bienvenue
+            notif_bienvenue(user)
 
             login(request, user)
             log_activite(user, 'INSCRIPTION', request)
             messages.success(
                 request,
-                f"🎉 Bienvenue {user.prenom} ! Votre compte a été créé avec succès."
+                f"Bienvenue {user.prenom} ! Votre compte a été créé."
             )
             return redirect(get_redirect_url(user))
         else:
@@ -436,20 +440,30 @@ def repondre_reservation(request, reservation_id):
         return redirect('accounts:tableau_de_bord')
 
     from logements.models import Reservation
-    from django.http import JsonResponse
+    from notifs.utils import notif_reservation_confirmee, notif_reservation_refusee
 
-    res    = get_object_or_404(Reservation, pk=reservation_id,
-                                logement__bailleur=request.user)
+    res    = get_object_or_404(
+        Reservation, pk=reservation_id,
+        logement__bailleur=request.user
+    )
     action = request.POST.get('action')
 
     if action == 'confirmer':
         res.statut = 'CONFIRME'
         res.save()
-        messages.success(request, f"✅ Réservation de {res.locataire.get_full_name()} confirmée.")
+        notif_reservation_confirmee(res)
+        messages.success(
+            request,
+            f"✅ Réservation de {res.locataire.get_full_name()} confirmée."
+        )
     elif action == 'refuser':
         res.statut = 'REFUSE'
         res.save()
-        messages.warning(request, f"Réservation de {res.locataire.get_full_name()} refusée.")
+        notif_reservation_refusee(res)
+        messages.warning(
+            request,
+            f"Réservation de {res.locataire.get_full_name()} refusée."
+        )
 
     return redirect('accounts:gerer_reservations')
 
