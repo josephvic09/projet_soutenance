@@ -2,6 +2,130 @@
 {% load static humanize %}
 {% block title %}{{ logement.titre }}{% endblock %}
 
+{% block extra_css %}
+<style>
+  /* ── Galerie : indication visuelle que les photos sont cliquables ── */
+  #galleryMain { cursor: zoom-in; }
+  .thumb-clickable { cursor: pointer; }
+
+  /* ── Lightbox plein écran ───────────────────────────────────────── */
+  .lightbox-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(5,5,10,.92);
+    z-index: 2000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+  }
+  .lightbox-overlay.open { display: flex; }
+  .lightbox-img-wrap {
+    flex: 1;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    min-height: 0;
+  }
+  .lightbox-img-wrap img {
+    max-width: 92%;
+    max-height: 85vh;
+    object-fit: contain;
+    border-radius: 6px;
+    box-shadow: 0 10px 40px rgba(0,0,0,.5);
+  }
+  .lightbox-close {
+    position: absolute;
+    top: 18px;
+    right: 22px;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.12);
+    border: none;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 2010;
+  }
+  .lightbox-close:hover { background: rgba(255,255,255,.22); }
+  .lightbox-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.12);
+    border: none;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+  .lightbox-nav:hover { background: rgba(255,255,255,.22); }
+  .lightbox-prev { left: 18px; }
+  .lightbox-next { right: 18px; }
+  .lightbox-footer {
+    flex-shrink: 0;
+    padding: .9rem 0 1.4rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    color: rgba(255,255,255,.85);
+    font-size: .85rem;
+  }
+  .lightbox-download {
+    background: var(--primary);
+    color: white !important;
+    border: none;
+    padding: .5rem 1.1rem;
+    border-radius: var(--radius-sm);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: .85rem;
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+  }
+  .lightbox-download:hover { opacity: .9; color: white !important; }
+
+  /* ── Contact : téléphone / WhatsApp ─────────────────────────────── */
+  .contact-row {
+    display: flex;
+    gap: .5rem;
+    margin-top: .5rem;
+  }
+  .contact-row a {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .4rem;
+    padding: .55rem 0;
+    border-radius: var(--radius-sm);
+    font-size: .85rem;
+    font-weight: 600;
+    text-decoration: none;
+  }
+  .contact-row .btn-tel {
+    background: var(--primary-light);
+    color: var(--primary);
+  }
+  .contact-row .btn-tel:hover { background: var(--primary); color: white; }
+  .contact-row .btn-whatsapp {
+    background: #e7f9ee;
+    color: #128c4a;
+  }
+  .contact-row .btn-whatsapp:hover { background: #25D366; color: white; }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container py-4">
 
@@ -35,18 +159,23 @@
                src="{{ photos.first.image.url }}"
                alt="{{ logement.titre }}"
                class="w-100 rounded-4"
-               style="height:420px;object-fit:cover">
+               style="height:420px;object-fit:cover"
+               data-index="0"
+               onclick="openLightbox(0)">
           {% if photos.count > 1 %}
           <div class="d-flex gap-2 mt-2 flex-wrap">
             {% for photo in photos %}
             <img src="{{ photo.image.url }}"
                  alt="Photo {{ forloop.counter }}"
-                 onclick="document.getElementById('galleryMain').src=this.src"
-                 class="rounded-3"
+                 onclick="document.getElementById('galleryMain').src=this.src;
+                          document.getElementById('galleryMain').dataset.index='{{ forloop.counter0 }}'"
+                 ondblclick="openLightbox({{ forloop.counter0 }})"
+                 class="rounded-3 thumb-clickable"
                  style="height:70px;width:90px;object-fit:cover;
-                        cursor:pointer;border:2px solid transparent"
+                        border:2px solid transparent"
                  onmouseover="this.style.borderColor='#2563eb'"
-                 onmouseout="this.style.borderColor='transparent'">
+                 onmouseout="this.style.borderColor='transparent'"
+                 title="Clic : aperçu — Double-clic : agrandir">
             {% endfor %}
           </div>
           {% endif %}
@@ -306,6 +435,25 @@
            class="btn btn-primary w-100 mb-2">
           <i class="bi bi-chat-dots me-2"></i>Contacter le bailleur
         </a>
+
+        {% if logement.bailleur.telephone %}
+        <div class="contact-row">
+          <a href="tel:{{ logement.bailleur.telephone }}" class="btn-tel">
+            <svg data-lucide="phone" style="width:15px;height:15px"></svg>
+            Appeler
+          </a>
+          <a href="#" id="btnWhatsapp"
+             data-phone="{{ logement.bailleur.telephone }}"
+             target="_blank" rel="noopener" class="btn-whatsapp">
+            <svg data-lucide="message-circle" style="width:15px;height:15px"></svg>
+            WhatsApp
+          </a>
+        </div>
+        <div class="text-muted mt-2" style="font-size:.72rem">
+          <i class="bi bi-telephone me-1"></i>{{ logement.bailleur.telephone }}
+        </div>
+        {% endif %}
+
         {% elif not user.is_authenticated %}
         <a href="{% url 'accounts:connexion' %}?next={{ request.path }}"
            class="btn btn-primary w-100 mb-2">
@@ -341,15 +489,39 @@
       <!-- Réservation -->
       {% if user.is_authenticated and user != logement.bailleur and logement.disponible %}
       <div class="card border-0 shadow-sm rounded-4 p-4 mb-3">
-        <h6 class="fw-bold mb-3">📅 Demander une visite</h6>
-        <form method="post" action="{% url 'logements:reserver' logement.pk %}">
+        <h6 class="fw-bold mb-3">📅 Visiter ou réserver</h6>
+
+        <form method="post" action="{% url 'logements:reserver' logement.pk %}" id="reservForm">
           {% csrf_token %}
-          <div class="mb-2">{{ form_reservation.type_demande }}</div>
-          <div class="mb-2">{{ form_reservation.date_debut }}</div>
-          <div class="mb-2">{{ form_reservation.message }}</div>
-          <button type="submit" class="btn btn-success w-100">
-            <i class="bi bi-calendar-check me-2"></i>Envoyer la demande
+          <input type="hidden" name="type_demande" id="typeDemandeInput" value="VISITE">
+
+          <div class="mb-2">
+            <label class="form-label small text-muted mb-1">Date souhaitée</label>
+            {{ form_reservation.date_debut }}
+            {% if form_reservation.date_debut.errors %}
+            <div class="text-danger small mt-1">{{ form_reservation.date_debut.errors.0 }}</div>
+            {% endif %}
+          </div>
+          <div class="mb-3">
+            <label class="form-label small text-muted mb-1">Message (optionnel)</label>
+            {{ form_reservation.message }}
+          </div>
+
+          <button type="submit"
+                  class="btn btn-outline-primary w-100 mb-2"
+                  onclick="document.getElementById('typeDemandeInput').value='VISITE'">
+            <i class="bi bi-calendar-check me-2"></i>Demander une visite (gratuit)
           </button>
+
+          <button type="submit"
+                  class="btn btn-success w-100"
+                  onclick="document.getElementById('typeDemandeInput').value='RESERVATION'">
+            <i class="bi bi-bookmark-check me-2"></i>Réserver maintenant — 1 000 FCFA
+          </button>
+
+          <small class="text-muted d-block text-center mt-2" style="font-size:.72rem">
+            Réserver bloque le logement et déclenche le paiement des frais de réservation.
+          </small>
         </form>
       </div>
       {% endif %}
@@ -386,4 +558,94 @@
   {% endif %}
 
 </div>
+
+<!-- ─── Lightbox plein écran ─────────────────────────────── -->
+<div class="lightbox-overlay" id="lightbox">
+  <button class="lightbox-close" onclick="closeLightbox()">
+    <svg data-lucide="x" style="width:20px;height:20px"></svg>
+  </button>
+  <div class="lightbox-img-wrap">
+    <button class="lightbox-nav lightbox-prev" onclick="navLightbox(-1)">
+      <svg data-lucide="chevron-left" style="width:22px;height:22px"></svg>
+    </button>
+    <img id="lightboxImg" src="" alt="Photo du logement">
+    <button class="lightbox-nav lightbox-next" onclick="navLightbox(1)">
+      <svg data-lucide="chevron-right" style="width:22px;height:22px"></svg>
+    </button>
+  </div>
+  <div class="lightbox-footer">
+    <span id="lightboxCounter"></span>
+    <a id="lightboxDownload" class="lightbox-download" href="" download>
+      <svg data-lucide="download" style="width:15px;height:15px"></svg>
+      Enregistrer la photo
+    </a>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// ─── Galerie de photos : liste complète pour la lightbox ─────────
+const galleryPhotos = [
+  {% for photo in logement.photos.all %}
+  "{{ photo.image.url|escapejs }}"{% if not forloop.last %},{% endif %}
+  {% endfor %}
+];
+
+let lightboxIndex = 0;
+const lightboxEl   = document.getElementById('lightbox');
+const lightboxImg  = document.getElementById('lightboxImg');
+const lightboxCnt  = document.getElementById('lightboxCounter');
+const lightboxDl   = document.getElementById('lightboxDownload');
+
+function openLightbox(index) {
+  if (!galleryPhotos.length) return;
+  lightboxIndex = index;
+  updateLightbox();
+  lightboxEl.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeLightbox() {
+  lightboxEl.classList.remove('open');
+  document.body.style.overflow = '';
+}
+function navLightbox(delta) {
+  lightboxIndex = (lightboxIndex + delta + galleryPhotos.length) % galleryPhotos.length;
+  updateLightbox();
+}
+function updateLightbox() {
+  const url = galleryPhotos[lightboxIndex];
+  lightboxImg.src = url;
+  lightboxDl.href = url;
+  lightboxCnt.textContent = `${lightboxIndex + 1} / ${galleryPhotos.length}`;
+}
+
+// Fermer en cliquant en dehors de l'image, ou avec Échap / flèches clavier
+lightboxEl.addEventListener('click', function (e) {
+  if (e.target === lightboxEl) closeLightbox();
+});
+document.addEventListener('keydown', function (e) {
+  if (!lightboxEl.classList.contains('open')) return;
+  if (e.key === 'Escape') closeLightbox();
+  if (e.key === 'ArrowLeft') navLightbox(-1);
+  if (e.key === 'ArrowRight') navLightbox(1);
+});
+
+// ─── Lien WhatsApp construit à partir du numéro de téléphone ──────
+const btnWhatsapp = document.getElementById('btnWhatsapp');
+if (btnWhatsapp) {
+  let phone = btnWhatsapp.dataset.phone.replace(/[\s.\-]/g, '');
+  if (phone.startsWith('+')) {
+    phone = phone.slice(1);
+  } else if (phone.startsWith('0')) {
+    phone = '237' + phone.slice(1);          // numéro local camerounais -> indicatif 237
+  } else if (!phone.startsWith('237')) {
+    phone = '237' + phone;
+  }
+  const message = encodeURIComponent(
+    "Bonjour, je vous contacte au sujet de votre annonce \"{{ logement.titre|escapejs }}\" sur LogementCM."
+  );
+  btnWhatsapp.href = `https://wa.me/${phone}?text=${message}`;
+}
+</script>
 {% endblock %}

@@ -19,7 +19,10 @@ def initier_paiement(request, reservation_id):
     if reservation.paye:
         messages.info(request, "Cette réservation a déjà été payée.")
         return redirect('accounts:mes_reservations')
-    montant = reservation.logement.prix
+ 
+    # ── Montant : frais fixes de réservation (1000 FCFA), pas le loyer ──
+    montant = reservation.montant or 1000
+ 
     if request.method == 'POST':
         methode   = request.POST.get('methode', 'MTN_MOMO')
         telephone = request.POST.get('telephone', '').strip()
@@ -43,6 +46,8 @@ def initier_paiement(request, reservation_id):
         'reservation': reservation,
         'montant':     montant,
     })
+ 
+ 
 
 
 @login_required
@@ -69,6 +74,15 @@ def confirmer_paiement(request, paiement_uuid):
                 paiement.reservation.paye   = True
                 paiement.reservation.statut = 'CONFIRME'
                 paiement.reservation.save()
+ 
+                # ── Réservation (pas simple visite) payée : le logement ──
+                # ── disparaît du fil puisqu'il est désormais pris.       ──
+                if paiement.reservation.type_demande == 'RESERVATION':
+                    logement = paiement.reservation.logement
+                    logement.statut     = 'LOUE'
+                    logement.disponible = False
+                    logement.save()
+ 
             try:
                 from notifs.utils import notif_paiement_reussi
                 notif_paiement_reussi(paiement)

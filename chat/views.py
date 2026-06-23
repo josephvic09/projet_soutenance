@@ -19,7 +19,7 @@ def liste_conversations(request):
     ).select_related(
         'locataire', 'bailleur', 'logement'
     ).order_by('-modifie_le')
-    return render(request, 'chat/conversations.html', {
+    return render(request, 'chat/conversations.html', {   # ← pluriel
         'conversations': convs
     })
 
@@ -41,6 +41,37 @@ def conversation_detail(request, conv_uuid):
         'conversation': conv,
         'messages':     messages_list,
     })
+# ─── À ajouter dans chat/views.py, par exemple juste après conversation_detail ───
+
+@login_required
+def poll_messages(request, conv_uuid):
+    """
+    Appelée toutes les ~3 secondes en JS depuis la page de conversation.
+    Renvoie les 30 derniers messages avec leur statut de lecture,
+    et marque comme lus les messages reçus pendant que la page est ouverte.
+    """
+    conv = get_object_or_404(Conversation, uuid=conv_uuid)
+    if request.user not in [conv.locataire, conv.bailleur]:
+        return JsonResponse({'error': 'Accès refusé'}, status=403)
+
+    # Marquer comme lus les messages reçus (pas envoyés par moi)
+    Message.objects.filter(
+        conversation=conv, non_lu=True
+    ).exclude(expediteur=request.user).update(
+        non_lu=False, lu_le=timezone.now()
+    )
+
+    qs = conv.messages.filter(supprime=False).order_by('-cree_le')[:30]
+    data = []
+    for m in reversed(list(qs)):
+        data.append({
+            'id':            m.pk,
+            'contenu':       m.contenu,
+            'expediteur_id': m.expediteur_id,
+            'cree_le':       m.cree_le.strftime('%H:%M'),
+            'lu':            not m.non_lu,
+        })
+    return JsonResponse({'messages': data})
 
 
 @login_required

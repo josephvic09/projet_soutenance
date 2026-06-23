@@ -23,14 +23,16 @@
   <div class="container">
 
     <!-- Logo -->
-    <a class="navbar-brand" href="{% url 'logements:accueil' %}">
-      <svg data-lucide="home"
-           style="width:22px;height:22px;margin-right:6px;vertical-align:-3px;color:#6366f1">
-      </svg>
-      Logement<span style="background:linear-gradient(135deg,#6366f1,#8b5cf6);
-                           -webkit-background-clip:text;
-                           -webkit-text-fill-color:transparent;
-                           background-clip:text">CM</span>
+    <a class="navbar-brand d-flex align-items-center gap-2" href="{% url 'logements:accueil' %}">
+      <img src="{% static 'images/logo.png' %}"
+           alt="LogementCM"
+           style="height:100px;width:100px;object-fit:contain;border-radius:50%">
+      <span>
+        Logement<span style="background:linear-gradient(135deg,#6366f1,#8b5cf6);
+                             -webkit-background-clip:text;
+                             -webkit-text-fill-color:transparent;
+                             background-clip:text">CM</span>
+      </span>
     </a>
 
     <!-- Toggle mobile -->
@@ -289,7 +291,9 @@
       <!-- Logo et description -->
       <div class="col-lg-4">
         <h5 class="fw-bold mb-3 d-flex align-items-center gap-2">
-          <svg data-lucide="home" style="width:20px;height:20px;color:#6366f1"></svg>
+          <img src="{% static 'images/logo.png' %}"
+               alt="LogementCM"
+               style="height:32px;width:32px;object-fit:contain;border-radius:50%">
           LogementCM
         </h5>
         <p style="color:var(--gray-400);font-size:.875rem;line-height:1.7">
@@ -391,11 +395,11 @@
           </li>
           <li class="mb-2 d-flex align-items-center gap-2">
             <svg data-lucide="phone" style="width:15px;height:15px;color:#6366f1;flex-shrink:0"></svg>
-            +237 653 381189
+            +237 653381189
           </li>
           <li class="mb-2 d-flex align-items-center gap-2">
             <svg data-lucide="mail" style="width:15px;height:15px;color:#6366f1;flex-shrink:0"></svg>
-            contact@logementcm.cm
+            khaliploic@gmail.com
           </li>
         </ul>
         <span class="badge mt-2"
@@ -411,7 +415,7 @@
 
     <div class="d-flex justify-content-between flex-wrap gap-2"
          style="font-size:.8rem;color:var(--gray-400)">
-      <span>© 2024 LogementCM — Institut Africain d'Informatique</span>
+      <span>© 2026 LogementCM</span>
       <span>Développé avec ❤️ pour le Cameroun 🇨🇲</span>
     </div>
 

@@ -50,9 +50,10 @@ urlpatterns = [
          name='signaler'),
 
     # ─── Admin ───────────────────────────────────────
-    path('admin/logements/<int:logement_id>/valider/',
-         views.admin_valider_logement,
-         name='admin_valider'),
+    
+    path('gestion/logements/<int:logement_id>/valider/',
+     views.admin_valider_logement,
+     name='admin_valider'),
 
     # ─── API ─────────────────────────────────────────
     path('api/quartiers/',

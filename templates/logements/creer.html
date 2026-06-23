@@ -182,6 +182,20 @@
           Photos
         </div>
       </div>
+      <!-- Indicateur étapes -->
+      <div class="progress-steps">
+        ...
+        <div class="progress-step">
+          <svg data-lucide="images" style="width:14px;height:14px"></svg>
+          Photos
+        </div>
+      </div>
+
+      <!-- ▼▼▼ BALISE MANQUANTE À AJOUTER ▼▼▼ -->
+      <form method="post" enctype="multipart/form-data" id="annonce-form">
+        {% csrf_token %}
+      
+    
 
       <!-- Afficher les erreurs globales -->
       {% if form.errors %}

@@ -6,6 +6,11 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.db.models import Q, Count
 from django.core.paginator import Paginator
+from django.http import Http404
+
+from django.db.models import Avg
+
+from django.contrib import messages
 
 from .models import (
     Logement, Ville, Quartier, Favori,
@@ -13,6 +18,8 @@ from .models import (
 )
 from .forms import LogementForm, RechercheForm, AvisForm, ReservationForm
 from accounts.models import Utilisateur
+FRAIS_RESERVATION = 1000  # FCFA — frais fixes pour confirmer une réservation
+
 
 
 # ─── Accueil ─────────────────────────────────────────
@@ -175,22 +182,58 @@ def recherche(request):
 
 # ─── Détail logement ─────────────────────────────────
 
+
+
+
 def detail_logement(request, slug):
-    logement = get_object_or_404(
-        Logement, slug=slug, statut='PUBLIE'
+    logement = get_object_or_404(Logement, slug=slug)
+
+    est_proprietaire = (
+        request.user.is_authenticated and request.user == logement.bailleur
+    )
+    est_admin = (
+        request.user.is_authenticated
+        and request.user.role in ['ADMIN', 'SUPER_ADMIN']
     )
 
-    # Incrémenter les vues
-    Logement.objects.filter(pk=logement.pk).update(
-        nb_vues=logement.nb_vues + 1
-    )
+    if logement.statut != 'PUBLIE' and not (est_proprietaire or est_admin):
+        raise Http404("Aucun logement ne correspond à la requête.")
 
-    photos       = logement.photos.order_by('ordre', '-principale')
-    avis         = logement.avis.filter(actif=True).select_related('auteur')
-    form_avis    = AvisForm()
-    form_reserv  = ReservationForm()
+    # ─── Soumission d'un avis ───────────────────────────
+    if request.method == 'POST' and request.POST.get('avis'):
+        if not request.user.is_authenticated:
+            messages.error(request, "Connectez-vous pour laisser un avis.")
+            return redirect(f"{reverse('accounts:connexion')}?next={request.path}")
 
-    # Logements similaires
+        form_avis = AvisForm(request.POST)
+        if form_avis.is_valid():
+            avis = form_avis.save(commit=False)
+            avis.logement = logement
+            avis.auteur = request.user
+            avis.save()
+            messages.success(
+                request,
+                "Merci ! Votre avis a été enregistré et sera visible après validation."
+            )
+            return redirect('logements:detail', slug=logement.slug)
+        else:
+            messages.error(request, "Veuillez corriger les erreurs de votre avis.")
+    else:
+        form_avis = AvisForm()
+
+    if not est_proprietaire:
+        Logement.objects.filter(pk=logement.pk).update(
+            nb_vues=logement.nb_vues + 1
+        )
+
+    photos = logement.photos.order_by('ordre', '-principale')
+    avis_list = logement.avis.filter(approuve=True).select_related('auteur')
+    note_moy = avis_list.aggregate(Avg('note'))['note__avg']
+    if note_moy is not None:
+        note_moy = round(note_moy, 1)
+
+    form_reserv = ReservationForm()
+
     similaires = Logement.objects.filter(
         statut='PUBLIE',
         disponible=True,
@@ -198,24 +241,22 @@ def detail_logement(request, slug):
         type_logement=logement.type_logement,
     ).exclude(pk=logement.pk).prefetch_related('photos')[:4]
 
-    # Vérifier si favori
     est_favori = False
     if request.user.is_authenticated:
         est_favori = Favori.objects.filter(
-            utilisateur=request.user,
-            logement=logement
+            utilisateur=request.user, logement=logement
         ).exists()
 
     return render(request, 'logements/detail.html', {
-        'logement':   logement,
-        'photos':     photos,
-        'avis':       avis,
-        'form_avis':  form_avis,
-        'form_reserv':form_reserv,
-        'similaires': similaires,
-        'est_favori': est_favori,
+        'logement':        logement,
+        'photos':          photos,
+        'avis_list':       avis_list,
+        'note_moy':        note_moy,
+        'avis_form':       form_avis,
+        'form_reservation': form_reserv,
+        'similaires':      similaires,
+        'est_favori':      est_favori,
     })
-
 
 # ─── Créer logement ───────────────────────────────────
 
@@ -232,7 +273,7 @@ def creer_logement(request):
         if form.is_valid():
             logement          = form.save(commit=False)
             logement.bailleur = request.user
-            logement.statut   = 'EN_ATTENTE'
+            logement.statut   = 'PUBLIE'          # ← publication directe, plus de validation admin
             logement.save()
 
             # Sauvegarder les photos
@@ -250,30 +291,9 @@ def creer_logement(request):
                     ordre=i,
                 )
 
-            # Notification admins
-            try:
-                from notifs.utils import notifier
-                admins = Utilisateur.objects.filter(
-                    role__in=['ADMIN', 'SUPER_ADMIN']
-                )
-                for admin in admins:
-                    notifier(
-                        destinataire=admin,
-                        type_notif='SYSTEME',
-                        titre='Nouvelle annonce à valider',
-                        message=(
-                            f'{request.user.get_full_name()} a soumis '
-                            f'"{logement.titre}"'
-                        ),
-                        lien='/accounts/admin/logements/?statut=EN_ATTENTE',
-                    )
-            except Exception:
-                pass
-
             messages.success(
                 request,
-                "✅ Annonce soumise avec succès ! "
-                "Elle sera publiée après validation sous 24h."
+                "✅ Annonce publiée avec succès ! Elle est désormais visible par tous."
             )
             return redirect('accounts:dashboard_bailleur')
         else:
@@ -289,8 +309,6 @@ def creer_logement(request):
         'form':   form,
         'villes': villes,
     })
-
-
 # ─── Modifier logement ────────────────────────────────
 
 @login_required
@@ -370,6 +388,8 @@ def toggle_favori(request, logement_id):
 
 # ─── Faire une réservation ────────────────────────────
 
+
+
 @login_required
 def faire_reservation(request, logement_id):
     logement = get_object_or_404(
@@ -389,6 +409,14 @@ def faire_reservation(request, logement_id):
             res           = form.save(commit=False)
             res.locataire = request.user
             res.logement  = logement
+
+            # Frais de réservation uniquement pour une vraie réservation,
+            # pas pour une simple demande de visite.
+            if res.type_demande == 'RESERVATION':
+                res.montant = FRAIS_RESERVATION
+            else:
+                res.montant = 0
+
             res.save()
 
             try:
@@ -397,20 +425,30 @@ def faire_reservation(request, logement_id):
             except Exception:
                 pass
 
+            if res.type_demande == 'RESERVATION':
+                messages.success(
+                    request,
+                    f"Demande de réservation envoyée. Réglez les "
+                    f"{FRAIS_RESERVATION} FCFA de frais de réservation "
+                    f"pour la confirmer."
+                )
+                return redirect('paiements:payer', reservation_id=res.pk)
+
             messages.success(
                 request,
-                "✅ Demande envoyée ! Le bailleur vous répondra sous 24h."
+                "✅ Demande de visite envoyée ! Le bailleur vous répondra sous 24h."
             )
             return redirect('accounts:mes_reservations')
+        else:
+            messages.error(request, "Veuillez corriger les erreurs du formulaire.")
     else:
         form = ReservationForm()
 
     return render(request, 'logements/reserver.html', {
         'form':     form,
         'logement': logement,
+        'frais_reservation': FRAIS_RESERVATION,
     })
-
-
 # ─── Signaler un logement ─────────────────────────────
 
 @login_required
